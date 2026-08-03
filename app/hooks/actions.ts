@@ -81,4 +81,48 @@ export async function createElection(title: string, description: string, startAt
         return { success: false, message: handleError(error)}
     }
 }
+
+
+export async function activateElection(id: string, status: boolean, action:string){
+    try {
+        const req = await fetch("/api/v1/actions/election", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({id, status, action})
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+
+export async function getElections(){
+    try {
+        const req = await fetch("/api/v1/actions/election", {
+            method: "GET",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+
+export async function deleteElection(id:string){
+    try {
+        const req = await fetch("/api/v1/actions/election", {
+            method: "DELETE",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
 //end of actions

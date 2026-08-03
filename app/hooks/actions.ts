@@ -65,3 +65,20 @@ export async function getUserData(){
     }
 }
 //end of data
+
+//actions
+export async function createElection(title: string, description: string, startAt:string, endAt:string, action: string){
+    try {
+        const req = await fetch("/api/v1/actions/election", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({title, description, startAt, endAt, action})
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+//end of actions

@@ -1,9 +1,687 @@
-import React from 'react'
+"use client";
+import React, { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  PlusIcon,
+  SearchIcon,
+  MoreVerticalIcon,
+  EditIcon,
+  TrashIcon,
+  PowerIcon,
+  SquareIcon,
+  CalendarIcon,
+  AlertTriangleIcon,
+} from "lucide-react";
+import { createElection } from "../hooks/actions";
+import { toast } from "sonner";
 
-const Election = () => {
-  return (
-    <div>Elections</div>
-  )
+type ElectionStatus = "Draft" | "Upcoming" | "Active" | "Ended";
+
+interface Election {
+  id: string;
+  title: string;
+  description: string;
+  startDate: string;
+  endDate: string;
+  status: ElectionStatus;
+  hasVotes: boolean;
+  isActivated: boolean;
 }
 
-export default Election
+const initialElections: Election[] = [
+  {
+    id: "1",
+    title: "Student Government Elections 2026",
+    description:
+      "Vote for your next student body president, vice president, and senators.",
+    startDate: "2026-08-01T09:00",
+    endDate: "2026-08-05T17:00",
+    status: "Active",
+    hasVotes: true,
+    isActivated: true,
+  },
+  {
+    id: "2",
+    title: "Department Officers",
+    description:
+      "Electing new officers for the Department of Computer Science.",
+    startDate: "2026-07-15T09:00",
+    endDate: "2026-07-17T17:00",
+    status: "Ended",
+    hasVotes: true,
+    isActivated: true,
+  },
+  {
+    id: "3",
+    title: "Freshman Representatives",
+    description: "Representatives for the incoming freshman class.",
+    startDate: "2026-08-10T09:00",
+    endDate: "2026-08-12T17:00",
+    status: "Upcoming",
+    hasVotes: false,
+    isActivated: true,
+  },
+  {
+    id: "4",
+    title: "Clubs and Organizations Council",
+    description: "Draft election for the upcoming semester.",
+    startDate: "2026-09-01T09:00",
+    endDate: "2026-09-05T17:00",
+    status: "Draft",
+    hasVotes: false,
+    isActivated: false,
+  },
+];
+
+const StatusBadge = ({ status }: { status: ElectionStatus }) => {
+  const variants = {
+    Draft: "bg-gray-500/10 text-gray-600 border-gray-500/20 dark:text-gray-400",
+    Upcoming:
+      "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
+    Active:
+      "bg-green-500/10 text-green-600 border-green-500/20 dark:text-green-400",
+    Ended:
+      "bg-slate-500/10 text-slate-600 border-slate-500/20 dark:text-slate-400",
+  };
+  return (
+    <Badge
+      variant="outline"
+      className={`rounded-full px-2 py-1 ${variants[status]}`}
+    >
+      {status}
+    </Badge>
+  );
+};
+
+const ElectionPage: React.FC = () => {
+  const [elections, setElections] = useState<Election[]>(initialElections);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingElection, setEditingElection] = useState<Election | null>(null);
+  const [alertType, setAlertType] = useState<"activate" | "end" | null>(null);
+  const [targetElectionId, setTargetElectionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    startDate: "",
+    endDate: "",
+  });
+
+  const itemsPerPage = 10;
+
+  const filteredElections = useMemo(() => {
+    return elections.filter((e) =>
+      e.title.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [elections, searchQuery]);
+
+  const paginatedElections = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredElections.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredElections, currentPage]);
+
+  const totalPages = Math.ceil(filteredElections.length / itemsPerPage);
+
+  const handleOpenCreate = () => {
+    setEditingElection(null);
+    setFormData({ title: "", description: "", startDate: "", endDate: "" });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (election: Election) => {
+    setEditingElection(election);
+    setFormData({
+      title: election.title,
+      description: election.description,
+      startDate: election.startDate,
+      endDate: election.endDate,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    if (editingElection) {
+      setElections((prev) =>
+        prev.map((e) =>
+          e.id === editingElection.id ? { ...e, ...formData } : e,
+        ),
+      );
+    } else {
+      const data = await createElection(
+        formData.title,
+        formData.description,
+        formData.startDate,
+        formData.endDate,
+        "create"
+      );
+      if (data.success) {
+        const newElection: Election = {
+          id: data.id,
+          ...formData,
+          status: "Draft",
+          hasVotes: false,
+          isActivated: false,
+        };
+        toast.success(data.message);
+        setElections((prev) => [newElection, ...prev]);
+      } else {
+        toast.error(data.message);
+      }
+    }
+    setLoading(false);
+    setIsModalOpen(false);
+  };
+
+  const handleActivate = (id: string) => {
+    setAlertType("activate");
+    setTargetElectionId(id);
+  };
+
+  const handleEnd = (id: string) => {
+    setAlertType("end");
+    setTargetElectionId(id);
+  };
+
+  const confirmAction = () => {
+    if (!targetElectionId) return;
+    if (alertType === "activate") {
+      setElections((prev) =>
+        prev.map((e) =>
+          e.id === targetElectionId ? { ...e, isActivated: true } : e,
+        ),
+      );
+    } else if (alertType === "end") {
+      setElections((prev) =>
+        prev.map((e) =>
+          e.id === targetElectionId
+            ? { ...e, status: "Ended" as ElectionStatus }
+            : e,
+        ),
+      );
+    }
+    setAlertType(null);
+    setTargetElectionId(null);
+  };
+
+  const activeElection = elections.find((e) => e.id === targetElectionId);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Elections
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage election cycles, schedules, and statuses. ({elections.length}{" "}
+            total)
+          </p>
+        </div>
+        <Button
+          onClick={handleOpenCreate}
+          className="bg-primary text-primary-foreground hover:bg-primary/90"
+        >
+          <PlusIcon className="mr-2 h-4 w-4" /> Create Election
+        </Button>
+      </div>
+
+      <div className="relative max-w-sm">
+        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search elections..."
+          className="pl-9 bg-card border-border/50"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
+
+      {filteredElections.length === 0 ? (
+        <Card className="bg-card border-border/50 shadow-sm flex flex-col items-center justify-center p-12 text-center">
+          <CalendarIcon className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <CardTitle className="text-xl font-bold text-foreground mb-2">
+            No elections yet
+          </CardTitle>
+          <CardDescription className="text-base mb-6 max-w-md">
+            Create your first election to get started. You can set up positions,
+            parties, and candidates later.
+          </CardDescription>
+          <Button onClick={handleOpenCreate}>
+            <PlusIcon className="mr-2 h-4 w-4" /> Create Election
+          </Button>
+        </Card>
+      ) : (
+        <>
+          <div className="hidden md:block rounded-md border border-border/50 overflow-hidden bg-card shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="font-medium text-muted-foreground">
+                    Election Name
+                  </TableHead>
+                  <TableHead className="font-medium text-muted-foreground">
+                    Start Date
+                  </TableHead>
+                  <TableHead className="font-medium text-muted-foreground">
+                    End Date
+                  </TableHead>
+                  <TableHead className="font-medium text-muted-foreground">
+                    Status
+                  </TableHead>
+                  <TableHead className="font-medium text-muted-foreground text-right">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedElections.map((election) => (
+                  <TableRow
+                    key={election.id}
+                    className="hover:bg-muted/20 transition-colors"
+                  >
+                    <TableCell className="font-medium text-foreground">
+                      <div className="flex flex-col">
+                        <span>{election.title}</span>
+                        <span className="text-xs text-muted-foreground font-normal line-clamp-1">
+                          {election.description}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(election.startDate).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(election.endDate).toLocaleDateString(
+                        undefined,
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={election.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="h-4 w-4 text-muted-foreground">
+                          <MoreVerticalIcon />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                          align="end"
+                          className="w-48 bg-card border-border"
+                        >
+                          <DropdownMenuItem
+                            onClick={() => handleOpenEdit(election)}
+                            className="text-foreground hover:bg-muted"
+                          >
+                            <EditIcon className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          {(election.status === "Draft" ||
+                            election.status === "Upcoming") &&
+                            !election.isActivated && (
+                              <DropdownMenuItem
+                                onClick={() => handleActivate(election.id)}
+                                className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                              >
+                                <PowerIcon className="mr-2 h-4 w-4" /> Activate
+                              </DropdownMenuItem>
+                            )}
+                          {election.status === "Active" && (
+                            <DropdownMenuItem
+                              onClick={() => handleEnd(election.id)}
+                              className="text-destructive hover:bg-destructive/10"
+                            >
+                              <SquareIcon className="mr-2 h-4 w-4" /> End
+                              Election
+                            </DropdownMenuItem>
+                          )}
+                          {election.status === "Draft" &&
+                            !election.hasVotes && (
+                              <DropdownMenuItem className="text-destructive hover:bg-destructive/10">
+                                <TrashIcon className="mr-2 h-4 w-4" /> Delete
+                              </DropdownMenuItem>
+                            )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="md:hidden space-y-4">
+            {paginatedElections.map((election) => (
+              <Card
+                key={election.id}
+                className="bg-card border-border/50 shadow-sm"
+              >
+                <CardContent className="p-4 flex flex-col gap-3">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <h3 className="font-semibold text-foreground">
+                        {election.title}
+                      </h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {election.description}
+                      </p>
+                    </div>
+                    <StatusBadge status={election.status} />
+                  </div>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <div className="flex gap-2">
+                      <span className="font-medium">Start:</span>
+                      <span>
+                        {new Date(election.startDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className="font-medium">End:</span>
+                      <span>
+                        {new Date(election.endDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-end pt-2 border-t border-border/50">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger className="ml-2 h-3 w-3">
+                        Actions <MoreVerticalIcon />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-48 bg-card border-border"
+                      >
+                        <DropdownMenuItem
+                          onClick={() => handleOpenEdit(election)}
+                          className="text-foreground hover:bg-muted"
+                        >
+                          <EditIcon className="mr-2 h-4 w-4" /> Edit
+                        </DropdownMenuItem>
+                        {(election.status === "Draft" ||
+                          election.status === "Upcoming") &&
+                          !election.isActivated && (
+                            <DropdownMenuItem
+                              onClick={() => handleActivate(election.id)}
+                              className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                            >
+                              <PowerIcon className="mr-2 h-4 w-4" /> Activate
+                            </DropdownMenuItem>
+                          )}
+                        {election.status === "Active" && (
+                          <DropdownMenuItem
+                            onClick={() => handleEnd(election.id)}
+                            className="text-destructive hover:bg-destructive/10"
+                          >
+                            <SquareIcon className="mr-2 h-4 w-4" /> End Election
+                          </DropdownMenuItem>
+                        )}
+                        {election.status === "Draft" && !election.hasVotes && (
+                          <DropdownMenuItem className="text-destructive hover:bg-destructive/10">
+                            <TrashIcon className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-2">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-125 bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">
+              {editingElection ? "Edit Election" : "Create Election"}
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              {editingElection
+                ? "Update the election details below."
+                : "Set up a new election cycle for your students."}
+            </DialogDescription>
+          </DialogHeader>
+
+          {editingElection?.status === "Active" && (
+            <div className="flex gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-sm">
+              <AlertTriangleIcon className="h-5 w-5 shrink-0" />
+              <p>
+                This election is currently active. Changing dates may affect
+                ongoing voting.
+              </p>
+            </div>
+          )}
+
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title" className="text-foreground">
+                Election Title
+              </Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+                placeholder="e.g. Student Government 2026"
+                className="bg-background border-border"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description" className="text-foreground">
+                Description
+              </Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                placeholder="Shown to students on the election card..."
+                rows={3}
+                className="bg-background border-border"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="startDate" className="text-foreground">
+                  Start Date & Time
+                </Label>
+                <Input
+                  id="startDate"
+                  type="datetime-local"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
+                  className="bg-background border-border"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endDate" className="text-foreground">
+                  End Date & Time
+                </Label>
+                <Input
+                  id="endDate"
+                  type="datetime-local"
+                  value={formData.endDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
+                  className="bg-background border-border"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground -mt-4">
+              Status is calculated automatically based on these dates once
+              activated.
+            </p>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={loading}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {editingElection ? "Save Changes" : "Create Election"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={alertType === "activate"}
+        onOpenChange={(open) => !open && setAlertType(null)}
+      >
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">
+              Activate {activeElection?.title}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Once activated, students will be able to vote once the start date
+              is reached. Make sure all positions, parties, and candidates are
+              finalized.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-background text-foreground hover:bg-muted">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmAction}
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              Confirm Activation
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={alertType === "end"}
+        onOpenChange={(open) => !open && setAlertType(null)}
+      >
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">
+              End {activeElection?.title} now?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              This will immediately close voting, even if the scheduled end date
+              hasn't passed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-background text-foreground hover:bg-muted">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmAction}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirm End Election
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+export default ElectionPage;

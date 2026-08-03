@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { logout } from "../hooks/actions";
 import { Spinner } from "@/components/ui/spinner";
+import Election from "../components/Election";
 
 const sidebarVariants: Variants = {
   hidden: { x: -100, opacity: 0 },
@@ -218,10 +219,6 @@ const SuperAdminDashboard: React.FC = () => {
             Election Committee Control Center
           </div>
           <div className="flex items-center gap-4 ml-auto">
-            <Button variant="ghost" size="icon" className="relative">
-              <BellIcon className="h-5 w-5 text-muted-foreground" />
-              <span className="absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-destructive border-2 border-background"></span>
-            </Button>
             <div className="flex items-center gap-3 border-l border-border/50 pl-4">
               <div className="text-right hidden sm:block">
                 <div className="text-sm font-medium text-foreground">
@@ -566,6 +563,10 @@ const SuperAdminDashboard: React.FC = () => {
                   </Card>
                 </div>
               </motion.div>
+            )}
+
+            {activeTab === "elections" && (
+              <Election/>
             )}
           </AnimatePresence>
         </div>

@@ -5,7 +5,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -58,6 +57,8 @@ import {
 import {
   activateElection,
   createElection,
+  deleteElection,
+  endElection,
   getElections,
 } from "../hooks/actions";
 import { toast } from "sonner";
@@ -93,7 +94,7 @@ const ElectionPage: React.FC = () => {
   const [editingElection, setEditingElection] = useState<electionProps | null>(
     null,
   );
-  const [alertType, setAlertType] = useState<"activate" | "end" | null>(null);
+  const [alertType, setAlertType] = useState<"activate" | "end" | "delete" | null>(null);
   const [targetElectionId, setTargetElectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -193,6 +194,12 @@ const ElectionPage: React.FC = () => {
     setTargetElectionId(id);
   };
 
+  const handleDelete = (id: string) => {
+    setAlertType("delete");
+    setTargetElectionId(id);
+  };
+
+
   const confirmAction = async () => {
     if (!targetElectionId) return;
     if (alertType === "activate") {
@@ -201,7 +208,9 @@ const ElectionPage: React.FC = () => {
         if (data.success) {
           setElections((prev) =>
             prev.map((e) =>
-              e.id === targetElectionId ? { ...e, isActivated: true, status: "active" } : e,
+              e.id === targetElectionId
+                ? { ...e, isActivated: true, status: "active" }
+                : e,
             ),
           );
           toast.success(data.message);
@@ -212,13 +221,32 @@ const ElectionPage: React.FC = () => {
         console.error(error);
       }
     } else if (alertType === "end") {
-      setElections((prev) =>
-        prev.map((e) =>
-          e.id === targetElectionId
-            ? { ...e, status: "ended" as ElectionStatus }
-            : e,
-        ),
-      );
+      const data = await endElection(targetElectionId, "end");
+      if (data.success) {
+        setElections((prev) =>
+          prev.map((e) =>
+            e.id === targetElectionId
+              ? { ...e, status: "ended" as ElectionStatus }
+              : e,
+          ),
+        );
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } else if (alertType === "delete") {
+      try {
+        const data = await deleteElection(targetElectionId);
+        if (data.success) {
+          setElections((prev) => prev.filter((e) => e.id !== targetElectionId));
+          toast.success(data.message);
+        } else {
+          toast.error(data.message);
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to delete election");
+      }
     }
     setAlertType(null);
     setTargetElectionId(null);
@@ -369,7 +397,7 @@ const ElectionPage: React.FC = () => {
                             </DropdownMenuItem>
                           )}
                           {election.status !== "active" && (
-                            <DropdownMenuItem className="text-destructive hover:bg-destructive/10">
+                            <DropdownMenuItem onClick={() => handleDelete(election.id)} className="text-destructive hover:bg-destructive/10">
                               <TrashIcon className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                           )}
@@ -646,6 +674,34 @@ const ElectionPage: React.FC = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Confirm End Election
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={alertType === "delete"}
+        onOpenChange={(open) => !open && setAlertType(null)}
+      >
+        <AlertDialogContent className="bg-card border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-foreground">
+              Delete {activeElection?.title}?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              This will permanently delete this election and its positions,
+              parties, and candidates. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-background text-foreground hover:bg-muted">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmAction}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

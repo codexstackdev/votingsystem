@@ -114,9 +114,24 @@ export async function getElections(){
 
 export async function deleteElection(id:string){
     try {
-        const req = await fetch("/api/v1/actions/election", {
+        const req = await fetch(`/api/v1/actions/election?id=${id}`, {
             method: "DELETE",
             headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+
+export async function endElection(id:string, action:string){
+    try {
+        const req = await fetch("/api/v1/actions/election", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({id, action})
         });
         const data = await req.json();
         if(!data.success) return { success: false, message: data.message};

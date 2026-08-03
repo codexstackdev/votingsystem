@@ -1,12 +1,15 @@
 "use client";
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { login } from '../hooks/actions';
+import { toast } from 'sonner';
+import { Spinner } from '@/components/ui/spinner';
+import { useRouter } from 'next/navigation';
 
-// Elite staggered animation variants
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
@@ -44,6 +47,37 @@ const formVariants: Variants = {
 };
 
 export const LoginFormUI: React.FC<{ onSwitchToRegister: () => void }> = ({ onSwitchToRegister }) => {
+  const [loginData, setLoginData] = useState({
+    lrnNumber: "",
+    password: ""
+  });
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const handleChange = (e:React.ChangeEvent<HTMLInputElement>)=>{
+    const {name, value} = e.target;
+    setLoginData((prev) => ({...prev, [name]:value}))
+  }
+
+  const handleSubmit = async(e:React.SubmitEvent)=>{
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const data = await login(loginData.lrnNumber, loginData.password);
+      if(data.success){
+        toast.success(data.message);
+        router.push("/students");
+      }
+      else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    finally{
+      setLoading(false);
+    }
+  }
+
   return (
     <motion.div
       key="login"
@@ -54,7 +88,6 @@ export const LoginFormUI: React.FC<{ onSwitchToRegister: () => void }> = ({ onSw
       className="w-full max-w-md perspective-1000"
     >
       <Card className="relative overflow-hidden bg-card/60 backdrop-blur-2xl border border-border/50 shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] rounded-3xl">
-        {/* Subtle decorative glow */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-primary/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-accent/10 rounded-full blur-3xl" />
         
@@ -71,6 +104,7 @@ export const LoginFormUI: React.FC<{ onSwitchToRegister: () => void }> = ({ onSw
           <motion.form 
             variants={containerVariants}
             initial="hidden"
+            onSubmit={handleSubmit}
             animate="visible"
             className="grid gap-6"
           >
@@ -81,6 +115,9 @@ export const LoginFormUI: React.FC<{ onSwitchToRegister: () => void }> = ({ onSw
               <Input
                 id="lrnNumber"
                 type="number"
+                name='lrnNumber'
+                value={loginData.lrnNumber}
+                onChange={handleChange}
                 placeholder="Enter your 12-digit LRN"
                 required
                 className="h-12 bg-background/40 border-border/40 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-300 rounded-xl"
@@ -96,6 +133,9 @@ export const LoginFormUI: React.FC<{ onSwitchToRegister: () => void }> = ({ onSw
               <Input
                 id="password"
                 type="password"
+                name='password'
+                value={loginData.password}
+                onChange={handleChange}
                 placeholder="••••••••"
                 required
                 className="h-12 bg-background/40 border-border/40 text-foreground placeholder:text-muted-foreground/50 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-300 rounded-xl"
@@ -105,9 +145,10 @@ export const LoginFormUI: React.FC<{ onSwitchToRegister: () => void }> = ({ onSw
             <motion.div variants={itemVariants} className="pt-2">
               <Button 
                 type="submit" 
+                disabled={loading}
                 className="w-full h-12 bg-primary text-primary-foreground hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all duration-300 font-bold text-base rounded-xl"
               >
-                Sign In
+                {loading ? <Spinner className='size-5'/> : "Sign In"}
               </Button>
             </motion.div>
             

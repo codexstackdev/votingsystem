@@ -129,7 +129,7 @@ The project uses MongoDB with Mongoose.
 ## Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/university-voting-system.git
+git clone https://github.com/codexstackdev/university-voting-system.git
 ```
 
 ## Install dependencies

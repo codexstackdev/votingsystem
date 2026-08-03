@@ -95,37 +95,37 @@ input[type=number] {
 }
 
 .dark {
-  --background: oklch(15% 0.005 270);
-  --foreground: oklch(98% 0 0);
-  --card: oklch(20% 0.005 270);
-  --card-foreground: oklch(98% 0 0);
-  --popover: oklch(20% 0.005 270);
-  --popover-foreground: oklch(98% 0 0);
-  --primary: oklch(60% 0.15 250);
-  --primary-foreground: oklch(15% 0.005 270);
-  --secondary: oklch(25% 0.01 270);
-  --secondary-foreground: oklch(98% 0 0);
-  --muted: oklch(20% 0.005 270);
-  --muted-foreground: oklch(70% 0.005 270);
-  --accent: oklch(50% 0.05 120);
-  --accent-foreground: oklch(98% 0 0);
-  --destructive: oklch(70% 0.2 20);
-  --border: oklch(25% 0.005 270);
-  --input: oklch(25% 0.005 270);
-  --ring: oklch(40% 0.005 270);
-  --chart-1: oklch(87% 0 0);
-  --chart-2: oklch(55.6% 0 0);
-  --chart-3: oklch(43.9% 0 0);
-  --chart-4: oklch(37.1% 0 0);
-  --chart-5: oklch(26.9% 0 0);
-  --sidebar: oklch(20% 0.005 270);
-  --sidebar-foreground: oklch(98% 0 0);
-  --sidebar-primary: oklch(55% 0.15 250);
-  --sidebar-primary-foreground: oklch(98% 0 0);
-  --sidebar-accent: oklch(45% 0.05 120);
-  --sidebar-accent-foreground: oklch(98% 0 0);
-  --sidebar-border: oklch(30% 0.005 270);
-  --sidebar-ring: oklch(45% 0.005 270);
+  --background: oklch(12% 0.01 260);
+  --foreground: oklch(95% 0.005 260);
+  --card: oklch(17% 0.01 260);
+  --card-foreground: oklch(95% 0.005 260);
+  --popover: oklch(17% 0.01 260);
+  --popover-foreground: oklch(95% 0.005 260);
+  --primary: oklch(62% 0.18 260);
+  --primary-foreground: oklch(12% 0.01 260);
+  --secondary: oklch(22% 0.01 260);
+  --secondary-foreground: oklch(92% 0.005 260);
+  --muted: oklch(22% 0.01 260);
+  --muted-foreground: oklch(68% 0.01 260);
+  --accent: oklch(28% 0.015 260);
+  --accent-foreground: oklch(95% 0.005 260);
+  --destructive: oklch(65% 0.22 25);
+  --border: oklch(28% 0.01 260);
+  --input: oklch(28% 0.01 260);
+  --ring: oklch(55% 0.15 260);
+  --chart-1: oklch(87% 0.02 260);
+  --chart-2: oklch(65% 0.05 260);
+  --chart-3: oklch(50% 0.08 260);
+  --chart-4: oklch(40% 0.05 260);
+  --chart-5: oklch(30% 0.02 260);
+  --sidebar: oklch(15% 0.01 260);
+  --sidebar-foreground: oklch(95% 0.005 260);
+  --sidebar-primary: oklch(58% 0.18 260);
+  --sidebar-primary-foreground: oklch(12% 0.01 260);
+  --sidebar-accent: oklch(25% 0.015 260);
+  --sidebar-accent-foreground: oklch(95% 0.005 260);
+  --sidebar-border: oklch(25% 0.01 260);
+  --sidebar-ring: oklch(50% 0.12 260);
 }
 
 @layer base {

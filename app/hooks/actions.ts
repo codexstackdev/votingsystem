@@ -35,5 +35,33 @@ export async function login(lrnNumber: string,password: string){
         return { success: false, message: handleError(error)}
     }
 }
-
+export async function logout(){
+    try {
+        const req = await fetch(`/api/v1/auth/logout`, {
+            method: "POST",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
 //end of auth
+
+//data
+export async function getUserData(){
+    try {
+        const req = await fetch(`/api/v1/info/user`, {
+            method: "GET",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+//end of data

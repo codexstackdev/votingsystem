@@ -156,16 +156,16 @@ const StudentDashboardUniversityUI: React.FC = () => {
         <UserIcon className="mr-3 h-5 w-5" /> Profile
       </Button>
 
-      {user?.role === "admin" && (
+      {user?.role === "superadmin" && (
         <Button
           variant={activeTab === "admin" ? "secondary" : "ghost"}
           className="justify-start text-base font-medium py-3 px-4 rounded-xl transition-all duration-200 text-foreground hover:bg-primary/10 dark:hover:bg-primary/20 hover:text-primary w-full"
           onClick={() => {
-            setActiveTab("admin");
             setIsSidebarOpen(false);
+            router.replace("/admin");
           }}
         >
-          <ShieldIcon className="mr-3 h-5 w-5" /> Admin Panel
+          <ShieldIcon className="mr-3 h-5 w-5" /> Admin
         </Button>
       )}
 

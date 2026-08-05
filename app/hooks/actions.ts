@@ -66,7 +66,7 @@ export async function getUserData(){
 }
 //end of data
 
-//actions
+//election actions
 export async function createElection(title: string, description: string, startAt:string, endAt:string, action: string){
     try {
         const req = await fetch("/api/v1/actions/election", {
@@ -81,7 +81,6 @@ export async function createElection(title: string, description: string, startAt
         return { success: false, message: handleError(error)}
     }
 }
-
 
 export async function activateElection(id: string, status: boolean, action:string){
     try {
@@ -140,4 +139,19 @@ export async function endElection(id:string, action:string){
         return { success: false, message: handleError(error)}
     }
 }
-//end of actions
+
+export async function updateElection(id:string, title: string, description: string, startAt:string, endAt:string){
+    try {
+        const req = await fetch("/api/v1/actions/election", {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({id, title, description, startAt, endAt})
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+//end of election actions

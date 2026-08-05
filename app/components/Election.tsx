@@ -60,6 +60,7 @@ import {
   deleteElection,
   endElection,
   getElections,
+  updateElection,
 } from "../hooks/actions";
 import { toast } from "sonner";
 import { electionProps } from "../hooks/types";
@@ -147,15 +148,21 @@ const ElectionPage: React.FC = () => {
     });
     setIsModalOpen(true);
   };
-
   const handleSave = async () => {
     setLoading(true);
     if (editingElection) {
-      setElections((prev) =>
+      const data = await updateElection(editingElection.id, formData.title, formData.description, formData.startDate, formData.endDate);
+      if(data.success){
+        setElections((prev) =>
         prev.map((e) =>
           e.id === editingElection.id ? { ...e, ...formData } : e,
         ),
       );
+      toast.success(data.message)
+      }
+      else{
+        toast.error(data.message);
+      }
     } else {
       const data = await createElection(
         formData.title,
@@ -253,7 +260,13 @@ const ElectionPage: React.FC = () => {
   };
 
   const activeElection = elections.find((e) => e.id === targetElectionId);
+  function formatDateTimeLocal(date: string | Date) {
+  const d = new Date(date);
 
+  const pad = (n: number) => n.toString().padStart(2, "0");
+
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -579,7 +592,7 @@ const ElectionPage: React.FC = () => {
                 <Input
                   id="startDate"
                   type="datetime-local"
-                  value={formData.startDate}
+                  value={formatDateTimeLocal(formData.startDate)}
                   onChange={(e) =>
                     setFormData({ ...formData, startDate: e.target.value })
                   }
@@ -593,7 +606,7 @@ const ElectionPage: React.FC = () => {
                 <Input
                   id="endDate"
                   type="datetime-local"
-                  value={formData.endDate}
+                  value={formatDateTimeLocal(formData.endDate)}
                   onChange={(e) =>
                     setFormData({ ...formData, endDate: e.target.value })
                   }

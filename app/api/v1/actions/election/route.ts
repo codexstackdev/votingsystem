@@ -129,3 +129,57 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, message: err }, { status: 500 });
   }
 }
+
+export async function PUT(req: NextRequest) {
+  const { id, title, description, startAt, endAt } = await req.json();
+
+  const token = req.cookies.get("cred")?.value;
+  const secret = new TextEncoder().encode(process.env.SECRET_KEY);
+
+  try {
+    const { payload } = await jwtVerify(token as string, secret);
+
+    if (!payload.user || payload.role !== "superadmin") {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    }
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: "Missing election id" },
+        { status: 400 },
+      );
+    }
+
+    await connectDB();
+
+    const updateData: Record<string, unknown> = {};
+
+    if (title !== undefined) updateData.title = title;
+    if (description !== undefined) updateData.description = description;
+    if (startAt !== undefined) updateData.startAt = startAt;
+    if (endAt !== undefined) updateData.endAt = endAt;
+
+    const updatedElection = await ElectionSchema.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Election updated successfully",
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    const err = error instanceof Error ? error.message : "Server Unreachable";
+    return NextResponse.json({ success: false, message: err }, { status: 500 });
+  }
+}

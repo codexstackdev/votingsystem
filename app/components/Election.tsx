@@ -53,6 +53,7 @@ import {
   SquareIcon,
   CalendarIcon,
   AlertTriangleIcon,
+  Loader2Icon,
 } from "lucide-react";
 import {
   activateElection,
@@ -65,6 +66,8 @@ import {
 import { toast } from "sonner";
 import { electionProps } from "../hooks/types";
 import { useElectionStore } from "../store/useElectionStore";
+import { useRouter } from "next/navigation";
+import { Encrypt } from "../hooks/secrue";
 
 type ElectionStatus = "draft" | "upcoming" | "active" | "ended";
 
@@ -89,7 +92,6 @@ const StatusBadge = ({ status }: { status: ElectionStatus }) => {
 };
 
 const ElectionPage: React.FC = () => {
-  // const [elections, setElections] = useState<electionProps[]>([]);
   const setElections = useElectionStore((s) => s.setElections);
   const elections = useElectionStore((s) => s.elections);
   const updateElectionLocal = useElectionStore((s) => s.updateElection);
@@ -101,9 +103,11 @@ const ElectionPage: React.FC = () => {
   const [editingElection, setEditingElection] = useState<electionProps | null>(
     null,
   );
+  const router = useRouter();
   const [alertType, setAlertType] = useState<"activate" | "end" | "delete" | null>(null);
   const [targetElectionId, setTargetElectionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isFetching, setIsFetching] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -114,11 +118,18 @@ const ElectionPage: React.FC = () => {
   useEffect(() => {
     const getData = async () => {
       if(elections.length >= 1) return;
-      const data = await getElections();
-      if (data.success) {
-        setElections(data.election);
-      } else {
-        console.log(data);
+      setIsFetching(true);
+      try {
+        const data = await getElections();
+        if (data.success) {
+          setElections(data.election);
+        } else {
+          toast.error("Failed to fetch elections");
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsFetching(false);
       }
     };
     getData();
@@ -155,48 +166,55 @@ const ElectionPage: React.FC = () => {
     });
     setIsModalOpen(true);
   };
+  
   const handleSave = async () => {
     setLoading(true);
-    if (editingElection) {
-      const data = await updateElection(editingElection.id, formData.title, formData.description, formData.startDate, formData.endDate);
-      if(data.success){
-        updateElectionLocal(editingElection.id, {
-          title: formData.title,
-          description: formData.description,
-          startAt: formData.startDate,
-          endAt: formData.endDate
-        })
-      toast.success(data.message)
-      }
-      else{
-        toast.error(data.message);
-      }
-    } else {
-      const data = await createElection(
-        formData.title,
-        formData.description,
-        formData.startDate,
-        formData.endDate,
-        "create",
-      );
-      if (data.success) {
-        const newElection: electionProps = {
-          id: data.id,
-          title: formData.title,
-          description: formData.description,
-          startAt: formData.startDate,
-          endAt: formData.endDate,
-          status: "draft",
-          isActivated: false,
-        };
-        toast.success(data.message);
-        addElection(newElection);
+    try {
+      if (editingElection) {
+        const data = await updateElection(editingElection.id, formData.title, formData.description, formData.startDate, formData.endDate);
+        if(data.success){
+          updateElectionLocal(editingElection.id, {
+            title: formData.title,
+            description: formData.description,
+            startAt: formData.startDate,
+            endAt: formData.endDate
+          })
+          toast.success(data.message)
+          setIsModalOpen(false);
+        } else {
+          toast.error(data.message);
+        }
       } else {
-        toast.error(data.message);
+        const data = await createElection(
+          formData.title,
+          formData.description,
+          formData.startDate,
+          formData.endDate,
+          "create",
+        );
+        if (data.success) {
+          const newElection: electionProps = {
+            id: data.id,
+            title: formData.title,
+            description: formData.description,
+            startAt: formData.startDate,
+            endAt: formData.endDate,
+            status: "draft",
+            isActivated: false,
+          };
+          toast.success(data.message);
+          addElection(newElection);
+          setIsModalOpen(false);
+        } else {
+          toast.error(data.message);
+        }
       }
+    } catch (error) {
+      console.error(error);
+      toast.error("An error occurred while saving");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-    setIsModalOpen(false);
   };
 
   const handleActivate = async (id: string) => {
@@ -217,8 +235,9 @@ const ElectionPage: React.FC = () => {
 
   const confirmAction = async () => {
     if (!targetElectionId) return;
-    if (alertType === "activate") {
-      try {
+    setLoading(true);
+    try {
+      if (alertType === "activate") {
         const data = await activateElection(targetElectionId, true, "update");
         if (data.success) {
           updateElectionLocal(targetElectionId, {isActivated: true, status: "active"});
@@ -226,19 +245,15 @@ const ElectionPage: React.FC = () => {
         } else {
           toast.error(data.message);
         }
-      } catch (error) {
-        console.error(error);
-      }
-    } else if (alertType === "end") {
-      const data = await endElection(targetElectionId, "end");
-      if (data.success) {
-        updateElectionLocal(targetElectionId, {status: "ended"});
-        toast.success(data.message);
-      } else {
-        toast.error(data.message);
-      }
-    } else if (alertType === "delete") {
-      try {
+      } else if (alertType === "end") {
+        const data = await endElection(targetElectionId, "end");
+        if (data.success) {
+          updateElectionLocal(targetElectionId, {status: "ended"});
+          toast.success(data.message);
+        } else {
+          toast.error(data.message);
+        }
+      } else if (alertType === "delete") {
         const data = await deleteElection(targetElectionId);
         if (data.success) {
           removeElection(targetElectionId);
@@ -246,23 +261,24 @@ const ElectionPage: React.FC = () => {
         } else {
           toast.error(data.message);
         }
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to delete election");
       }
+    } catch (error) {
+      console.error(error);
+      toast.error(`Failed to ${alertType} election`);
+    } finally {
+      setLoading(false);
+      setAlertType(null);
+      setTargetElectionId(null);
     }
-    setAlertType(null);
-    setTargetElectionId(null);
   };
 
   const activeElection = elections.find((e) => e.id === targetElectionId);
   function formatDateTimeLocal(date: string | Date) {
-  const d = new Date(date);
+    const d = new Date(date);
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
 
-  const pad = (n: number) => n.toString().padStart(2, "0");
-
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -277,6 +293,7 @@ const ElectionPage: React.FC = () => {
         </div>
         <Button
           onClick={handleOpenCreate}
+          disabled={loading || isFetching}
           className="bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <PlusIcon className="mr-2 h-4 w-4" /> Create Election
@@ -289,6 +306,7 @@ const ElectionPage: React.FC = () => {
           placeholder="Search elections..."
           className="pl-9 bg-card border-border/50"
           value={searchQuery}
+          disabled={isFetching}
           onChange={(e) => {
             setSearchQuery(e.target.value);
             setCurrentPage(1);
@@ -296,7 +314,12 @@ const ElectionPage: React.FC = () => {
         />
       </div>
 
-      {filteredElections.length === 0 ? (
+      {isFetching ? (
+        <div className="flex flex-col items-center justify-center p-24 text-center">
+          <Loader2Icon className="h-12 w-12 text-primary animate-spin mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">Fetching elections...</p>
+        </div>
+      ) : filteredElections.length === 0 ? (
         <Card className="bg-card border-border/50 shadow-sm flex flex-col items-center justify-center p-12 text-center">
           <CalendarIcon className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <CardTitle className="text-xl font-bold text-foreground mb-2">
@@ -306,7 +329,7 @@ const ElectionPage: React.FC = () => {
             Create your first election to get started. You can set up positions,
             parties, and candidates later.
           </CardDescription>
-          <Button onClick={handleOpenCreate}>
+          <Button onClick={handleOpenCreate} disabled={loading}>
             <PlusIcon className="mr-2 h-4 w-4" /> Create Election
           </Button>
         </Card>
@@ -316,26 +339,17 @@ const ElectionPage: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="font-medium text-muted-foreground">
-                    Election Name
-                  </TableHead>
-                  <TableHead className="font-medium text-muted-foreground">
-                    Start Date
-                  </TableHead>
-                  <TableHead className="font-medium text-muted-foreground">
-                    End Date
-                  </TableHead>
-                  <TableHead className="font-medium text-muted-foreground">
-                    Status
-                  </TableHead>
-                  <TableHead className="font-medium text-muted-foreground text-right">
-                    Actions
-                  </TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Election Name</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Start Date</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">End Date</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Status</TableHead>
+                  <TableHead className="font-medium text-muted-foreground text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedElections.map((election) => (
                   <TableRow
+                    onClick={() => router.push(`/admin/elections/${Encrypt(election.id)}`)}
                     key={election.id}
                     className="hover:bg-muted/20 transition-colors"
                   >
@@ -348,65 +362,56 @@ const ElectionPage: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(election.startAt).toLocaleDateString(
-                        undefined,
-                        {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      )}
+                      {new Date(election.startAt).toLocaleDateString(undefined, {
+                        month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
+                      })}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(election.endAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
+                        month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit",
                       })}
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={election.status} />
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right" onClick={(e:React.MouseEvent) => e.stopPropagation()}>
                       <DropdownMenu>
-                        <DropdownMenuTrigger className="h-4 w-4 text-muted-foreground">
-                          <MoreVerticalIcon />
+                        <DropdownMenuTrigger disabled={loading} className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-8 w-8 text-muted-foreground">
+                          <MoreVerticalIcon className="h-4 w-4" />
+                          <span className="sr-only">Open menu</span>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          className="w-48 bg-card border-border"
-                        >
+                        <DropdownMenuContent align="end" className="w-48 bg-card border-border">
                           <DropdownMenuItem
                             onClick={() => handleOpenEdit(election)}
+                            disabled={loading}
                             className="text-foreground hover:bg-muted"
                           >
                             <EditIcon className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
-                          {(election.status === "draft" ||
-                            election.status === "upcoming") &&
-                            !election.isActivated && (
-                              <DropdownMenuItem
-                                onClick={() => handleActivate(election.id)}
-                                className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
-                              >
-                                <PowerIcon className="mr-2 h-4 w-4" /> Activate
-                              </DropdownMenuItem>
-                            )}
+                          {(election.status === "draft" || election.status === "upcoming") && !election.isActivated && (
+                            <DropdownMenuItem
+                              onClick={() => handleActivate(election.id)}
+                              disabled={loading}
+                              className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
+                            >
+                              <PowerIcon className="mr-2 h-4 w-4" /> Activate
+                            </DropdownMenuItem>
+                          )}
                           {election.status === "active" && (
                             <DropdownMenuItem
                               onClick={() => handleEnd(election.id)}
+                              disabled={loading}
                               className="text-destructive hover:bg-destructive/10"
                             >
-                              <SquareIcon className="mr-2 h-4 w-4" /> End
-                              Election
+                              <SquareIcon className="mr-2 h-4 w-4" /> End Election
                             </DropdownMenuItem>
                           )}
                           {election.status !== "active" && (
-                            <DropdownMenuItem onClick={() => handleDelete(election.id)} className="text-destructive hover:bg-destructive/10">
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(election.id)}
+                              disabled={loading}
+                              className="text-destructive hover:bg-destructive/10"
+                            >
                               <TrashIcon className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
                           )}
@@ -421,73 +426,35 @@ const ElectionPage: React.FC = () => {
 
           <div className="md:hidden space-y-4">
             {paginatedElections.map((election) => (
-              <Card
-                key={election.id}
-                className="bg-card border-border/50 shadow-sm"
-              >
+              <Card key={election.id} className="bg-card border-border/50 shadow-sm">
                 <CardContent className="p-4 flex flex-col gap-3">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                      <h3 className="font-semibold text-foreground">
-                        {election.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {election.description}
-                      </p>
+                      <h3 className="font-semibold text-foreground">{election.title}</h3>
+                      <p className="text-xs text-muted-foreground line-clamp-2">{election.description}</p>
                     </div>
                     <StatusBadge status={election.status} />
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <div className="flex gap-2">
-                      <span className="font-medium">Start:</span>
-                      <span>
-                        {new Date(election.startAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="font-medium">End:</span>
-                      <span>
-                        {new Date(election.endAt).toLocaleDateString()}
-                      </span>
-                    </div>
+                    <div className="flex gap-2"><span className="font-medium">Start:</span><span>{new Date(election.startAt).toLocaleDateString()}</span></div>
+                    <div className="flex gap-2"><span className="font-medium">End:</span><span>{new Date(election.endAt).toLocaleDateString()}</span></div>
                   </div>
                   <div className="flex justify-end pt-2 border-t border-border/50">
                     <DropdownMenu>
-                      <DropdownMenuTrigger className="ml-2 h-3 w-3">
-                        Actions <MoreVerticalIcon />
+                      <DropdownMenuTrigger disabled={loading} className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-9 px-3 text-muted-foreground gap-2">
+                        <span>Actions</span>
+                        <MoreVerticalIcon className="h-4 w-4" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="w-48 bg-card border-border"
-                      >
-                        <DropdownMenuItem
-                          onClick={() => handleOpenEdit(election)}
-                          className="text-foreground hover:bg-muted"
-                        >
-                          <EditIcon className="mr-2 h-4 w-4" /> Edit
-                        </DropdownMenuItem>
-                        {(election.status === "draft" ||
-                          election.status === "upcoming") &&
-                          !election.isActivated && (
-                            <DropdownMenuItem
-                              onClick={() => handleActivate(election.id)}
-                              className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10"
-                            >
-                              <PowerIcon className="mr-2 h-4 w-4" /> Activate
-                            </DropdownMenuItem>
-                          )}
-                        {election.status === "active" && (
-                          <DropdownMenuItem
-                            onClick={() => handleEnd(election.id)}
-                            className="text-destructive hover:bg-destructive/10"
-                          >
-                            <SquareIcon className="mr-2 h-4 w-4" /> End Election
-                          </DropdownMenuItem>
+                      <DropdownMenuContent align="end" className="w-48 bg-card border-border">
+                        <DropdownMenuItem onClick={() => handleOpenEdit(election)} disabled={loading} className="text-foreground hover:bg-muted"><EditIcon className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                        {(election.status === "draft" || election.status === "upcoming") && !election.isActivated && (
+                          <DropdownMenuItem onClick={() => handleActivate(election.id)} disabled={loading} className="text-emerald-600 hover:bg-emerald-500/10 hover:text-emerald-600 dark:text-emerald-400 dark:hover:bg-emerald-500/10"><PowerIcon className="mr-2 h-4 w-4" /> Activate</DropdownMenuItem>
                         )}
-                        {election.status === "draft" && (
-                          <DropdownMenuItem className="text-destructive hover:bg-destructive/10">
-                            <TrashIcon className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
+                        {election.status === "active" && (
+                          <DropdownMenuItem onClick={() => handleEnd(election.id)} disabled={loading} className="text-destructive hover:bg-destructive/10"><SquareIcon className="mr-2 h-4 w-4" /> End Election</DropdownMenuItem>
+                        )}
+                        {election.status !== "active" && (
+                          <DropdownMenuItem onClick={() => handleDelete(election.id)} disabled={loading} className="text-destructive hover:bg-destructive/10"><TrashIcon className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -499,217 +466,105 @@ const ElectionPage: React.FC = () => {
 
           {totalPages > 1 && (
             <div className="flex items-center justify-between px-2">
-              <div className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages}
-              </div>
+              <div className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={currentPage === totalPages}
-                  onClick={() =>
-                    setCurrentPage((p) => Math.min(totalPages, p + 1))
-                  }
-                >
-                  Next
-                </Button>
+                <Button variant="outline" size="sm" disabled={currentPage === 1 || loading} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={currentPage === totalPages || loading} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>Next</Button>
               </div>
             </div>
           )}
         </>
       )}
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={(open) => !loading && setIsModalOpen(open)}>
         <DialogContent className="sm:max-w-125 bg-card border-border">
           <DialogHeader>
-            <DialogTitle className="text-foreground">
-              {editingElection ? "Edit Election" : "Create Election"}
-            </DialogTitle>
+            <DialogTitle className="text-foreground">{editingElection ? "Edit Election" : "Create Election"}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              {editingElection
-                ? "Update the election details below."
-                : "Set up a new election cycle for your students."}
+              {editingElection ? "Update the election details below." : "Set up a new election cycle for your students."}
             </DialogDescription>
           </DialogHeader>
 
           {editingElection?.status === "active" && (
             <div className="flex gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-sm">
               <AlertTriangleIcon className="h-5 w-5 shrink-0" />
-              <p>
-                This election is currently active. Changing dates may affect
-                ongoing voting.
-              </p>
+              <p>This election is currently active. Changing dates may affect ongoing voting.</p>
             </div>
           )}
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="title" className="text-foreground">
-                Election Title
-              </Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                placeholder="e.g. Student Government 2026"
-                className="bg-background border-border"
-              />
+              <Label htmlFor="title" className="text-foreground">Election Title</Label>
+              <Input id="title" disabled={loading} value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g. Student Government 2026" className="bg-background border-border" />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description" className="text-foreground">
-                Description
-              </Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                placeholder="Shown to students on the election card..."
-                rows={3}
-                className="bg-background border-border"
-              />
+              <Label htmlFor="description" className="text-foreground">Description</Label>
+              <Textarea id="description" disabled={loading} value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Shown to students on the election card..." rows={3} className="bg-background border-border" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="startDate" className="text-foreground">
-                  Start Date & Time
-                </Label>
-                <Input
-                  id="startDate"
-                  type="datetime-local"
-                  value={formatDateTimeLocal(formData.startDate)}
-                  onChange={(e) =>
-                    setFormData({ ...formData, startDate: e.target.value })
-                  }
-                  className="bg-background border-border"
-                />
+                <Label htmlFor="startDate" className="text-foreground">Start Date & Time</Label>
+                <Input id="startDate" disabled={loading} type="datetime-local" value={formatDateTimeLocal(formData.startDate)} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} className="bg-background border-border" />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="endDate" className="text-foreground">
-                  End Date & Time
-                </Label>
-                <Input
-                  id="endDate"
-                  type="datetime-local"
-                  value={formatDateTimeLocal(formData.endDate)}
-                  onChange={(e) =>
-                    setFormData({ ...formData, endDate: e.target.value })
-                  }
-                  className="bg-background border-border"
-                />
+                <Label htmlFor="endDate" className="text-foreground">End Date & Time</Label>
+                <Input id="endDate" disabled={loading} type="datetime-local" value={formatDateTimeLocal(formData.endDate)} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} className="bg-background border-border" />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground -mt-4">
-              Status is calculated automatically based on these dates once
-              activated.
-            </p>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSave}
-              disabled={loading}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
+            <Button variant="outline" disabled={loading} onClick={() => setIsModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSave} disabled={loading} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {loading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
               {editingElection ? "Save Changes" : "Create Election"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={alertType === "activate"}
-        onOpenChange={(open) => !open && setAlertType(null)}
-      >
+      <AlertDialog open={alertType === "activate"} onOpenChange={(open) => !loading && setAlertType(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">
-              Activate {activeElection?.title}?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground">
-              Once activated, students will be able to vote once the start date
-              is reached. Make sure all positions, parties, and candidates are
-              finalized.
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-foreground">Activate {activeElection?.title}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">Once activated, students will be able to vote once the start date is reached.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-background text-foreground hover:bg-muted">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmAction}
-              className="bg-emerald-600 text-white hover:bg-emerald-700"
-            >
+            <AlertDialogCancel disabled={loading} className="bg-background text-foreground hover:bg-muted">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={loading} onClick={confirmAction} className="bg-emerald-600 text-white hover:bg-emerald-700">
+              {loading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Activation
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={alertType === "end"}
-        onOpenChange={(open) => !open && setAlertType(null)}
-      >
+      <AlertDialog open={alertType === "end"} onOpenChange={(open) => !loading && setAlertType(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">
-              End {activeElection?.title} now?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground">
-              This will immediately close voting, even if the scheduled end date
-              hasn't passed.
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-foreground">End {activeElection?.title} now?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">This will immediately close voting, even if the scheduled end date hasn't passed.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-background text-foreground hover:bg-muted">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmAction}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogCancel disabled={loading} className="bg-background text-foreground hover:bg-muted">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={loading} onClick={confirmAction} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {loading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
               Confirm End Election
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog
-        open={alertType === "delete"}
-        onOpenChange={(open) => !open && setAlertType(null)}
-      >
+      <AlertDialog open={alertType === "delete"} onOpenChange={(open) => !loading && setAlertType(null)}>
         <AlertDialogContent className="bg-card border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-foreground">
-              Delete {activeElection?.title}?
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-muted-foreground">
-              This will permanently delete this election and its positions,
-              parties, and candidates. This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-foreground">Delete {activeElection?.title}?</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-background text-foreground hover:bg-muted">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmAction}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogCancel disabled={loading} className="bg-background text-foreground hover:bg-muted">Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={loading} onClick={confirmAction} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {loading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>

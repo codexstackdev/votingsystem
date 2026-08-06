@@ -137,7 +137,6 @@ const SuperAdminDashboard: React.FC = () => {
       {[
         { id: "dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
         { id: "elections", label: "Elections", icon: ListChecksIcon },
-        { id: "positions", label: "Positions", icon: ShieldIcon },
         { id: "parties", label: "Parties", icon: UsersRoundIcon },
         { id: "candidates", label: "Candidates", icon: UserCheckIcon },
         { id: "students", label: "Students", icon: GraduationCapIcon },

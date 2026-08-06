@@ -64,6 +64,7 @@ import {
 } from "../hooks/actions";
 import { toast } from "sonner";
 import { electionProps } from "../hooks/types";
+import { useElectionStore } from "../store/useElectionStore";
 
 type ElectionStatus = "draft" | "upcoming" | "active" | "ended";
 
@@ -88,7 +89,12 @@ const StatusBadge = ({ status }: { status: ElectionStatus }) => {
 };
 
 const ElectionPage: React.FC = () => {
-  const [elections, setElections] = useState<electionProps[]>([]);
+  // const [elections, setElections] = useState<electionProps[]>([]);
+  const setElections = useElectionStore((s) => s.setElections);
+  const elections = useElectionStore((s) => s.elections);
+  const updateElectionLocal = useElectionStore((s) => s.updateElection);
+  const addElection = useElectionStore((s) => s.addElection);
+  const removeElection = useElectionStore((s) => s.removeElection)
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -107,6 +113,7 @@ const ElectionPage: React.FC = () => {
 
   useEffect(() => {
     const getData = async () => {
+      if(elections.length >= 1) return;
       const data = await getElections();
       if (data.success) {
         setElections(data.election);
@@ -153,11 +160,12 @@ const ElectionPage: React.FC = () => {
     if (editingElection) {
       const data = await updateElection(editingElection.id, formData.title, formData.description, formData.startDate, formData.endDate);
       if(data.success){
-        setElections((prev) =>
-        prev.map((e) =>
-          e.id === editingElection.id ? { ...e, ...formData } : e,
-        ),
-      );
+        updateElectionLocal(editingElection.id, {
+          title: formData.title,
+          description: formData.description,
+          startAt: formData.startDate,
+          endAt: formData.endDate
+        })
       toast.success(data.message)
       }
       else{
@@ -182,7 +190,7 @@ const ElectionPage: React.FC = () => {
           isActivated: false,
         };
         toast.success(data.message);
-        setElections((prev) => [newElection, ...prev]);
+        addElection(newElection);
       } else {
         toast.error(data.message);
       }
@@ -213,13 +221,7 @@ const ElectionPage: React.FC = () => {
       try {
         const data = await activateElection(targetElectionId, true, "update");
         if (data.success) {
-          setElections((prev) =>
-            prev.map((e) =>
-              e.id === targetElectionId
-                ? { ...e, isActivated: true, status: "active" }
-                : e,
-            ),
-          );
+          updateElectionLocal(targetElectionId, {isActivated: true, status: "active"});
           toast.success(data.message);
         } else {
           toast.error(data.message);
@@ -230,13 +232,7 @@ const ElectionPage: React.FC = () => {
     } else if (alertType === "end") {
       const data = await endElection(targetElectionId, "end");
       if (data.success) {
-        setElections((prev) =>
-          prev.map((e) =>
-            e.id === targetElectionId
-              ? { ...e, status: "ended" as ElectionStatus }
-              : e,
-          ),
-        );
+        updateElectionLocal(targetElectionId, {status: "ended"});
         toast.success(data.message);
       } else {
         toast.error(data.message);
@@ -245,7 +241,7 @@ const ElectionPage: React.FC = () => {
       try {
         const data = await deleteElection(targetElectionId);
         if (data.success) {
-          setElections((prev) => prev.filter((e) => e.id !== targetElectionId));
+          removeElection(targetElectionId);
           toast.success(data.message);
         } else {
           toast.error(data.message);

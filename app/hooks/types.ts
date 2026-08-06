@@ -10,6 +10,13 @@ export interface userProps {
     role: string;
 }
 
+export interface statsProps {
+    ballots: number;
+    candidates: number;
+    parties: number;
+    positions: number;
+}
+
 export interface electionProps {
     id: string;
     isActivated: boolean;

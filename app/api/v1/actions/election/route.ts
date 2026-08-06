@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/app/lib/connect";
 import ElectionSchema from "@/app/models/ElectionSchema";
 import { jwtVerify } from "jose";
+import PositionSchema from "@/app/models/PositionSchema";
+import PartySchema from "@/app/models/PartySchema";
+import CandidateSchema from "@/app/models/CandidateSchema";
+import BallotSchema from "@/app/models/BallotSchema";
 
 export async function POST(req: NextRequest) {
   const { id, status, title, description, startAt, endAt, action } =
@@ -83,6 +87,8 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const params = req.nextUrl.searchParams;
+  const id = params.get("id");
   const token = req.cookies.get("cred")?.value;
   const secret = new TextEncoder().encode(process.env.SECRET_KEY);
   try {
@@ -93,8 +99,32 @@ export async function GET(req: NextRequest) {
         { status: 401 },
       );
     await connectDB();
-    const election = await ElectionSchema.find({});
-    return NextResponse.json({ success: true, election });
+    if (!id) {
+      const election = await ElectionSchema.find({});
+      return NextResponse.json({ success: true, election });
+    } else {
+      const election = await ElectionSchema.findById(id);
+      if (!election) {
+        return NextResponse.json(
+          { success: false, message: "Election not found" },
+          { status: 404 },
+        );
+      }
+      const [positions, parties, candidates, ballots] = await Promise.all([
+        PositionSchema.countDocuments({ election: id }),
+        PartySchema.countDocuments({ election: id }),
+        CandidateSchema.countDocuments({ election: id }),
+        BallotSchema.countDocuments({ election: id }),
+      ]);
+      return NextResponse.json(
+        {
+          success: true,
+          election,
+          stats: { positions, parties, candidates, ballots },
+        },
+        { status: 200 },
+      );
+    }
   } catch (error) {
     const err = error instanceof Error ? error.message : "Server Unreachable";
     return NextResponse.json({ success: false, message: err }, { status: 500 });

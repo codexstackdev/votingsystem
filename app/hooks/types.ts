@@ -26,3 +26,11 @@ export interface electionProps {
     startAt: string;
     endAt: string
 }
+
+export interface Position {
+  id: string;
+  title: string;
+  maxVotes: number;
+  order: number;
+  hasCandidates: boolean;
+}

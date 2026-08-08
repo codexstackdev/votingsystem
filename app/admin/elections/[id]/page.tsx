@@ -52,6 +52,7 @@ import {
 import { toast } from "sonner";
 import { useElectionStore } from "@/app/store/useElectionStore";
 import { Spinner } from "@/components/ui/spinner";
+import PositionsTab from "@/app/components/Position";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -491,7 +492,7 @@ const ElectionDetailPage = () => {
               </div>
 
               <TabsContent value="positions" className="mt-0 outline-none">
-                <EmptySubPage type="Positions" />
+                <PositionsTab/>
               </TabsContent>
               <TabsContent value="parties" className="mt-0 outline-none">
                 <EmptySubPage type="Parties" />

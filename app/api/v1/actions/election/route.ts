@@ -196,7 +196,7 @@ export async function PUT(req: NextRequest) {
       id,
       { $set: updateData },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       },
     );

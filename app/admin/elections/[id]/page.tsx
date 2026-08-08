@@ -17,10 +17,7 @@ import {
   InfoIcon,
   Trash2Icon,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -45,9 +42,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useParams, useRouter } from "next/navigation";
 import { Decrypt } from "@/app/hooks/secrue";
-import { getElections } from "@/app/hooks/actions";
+import {
+  activateElection,
+  deleteElection,
+  endElection,
+  getElections,
+  updateElection,
+} from "@/app/hooks/actions";
 import { toast } from "sonner";
 import { useElectionStore } from "@/app/store/useElectionStore";
+import { Spinner } from "@/components/ui/spinner";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -89,7 +93,11 @@ const StatusBadge = ({ status }: { status: ElectionStatus }) => {
   );
 };
 
-const EmptySubPage = ({ type }: { type: "Positions" | "Parties" | "Candidates" }) => {
+const EmptySubPage = ({
+  type,
+}: {
+  type: "Positions" | "Parties" | "Candidates";
+}) => {
   const icons = {
     Positions: <BriefcaseIcon className="h-12 w-12 text-muted-foreground/40" />,
     Parties: <UsersIcon className="h-12 w-12 text-muted-foreground/40" />,
@@ -97,17 +105,18 @@ const EmptySubPage = ({ type }: { type: "Positions" | "Parties" | "Candidates" }
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col items-center justify-center py-20 px-4 text-center bg-card/50 rounded-[2.5rem] border-2 border-dashed border-border"
     >
-      <div className="p-6 bg-muted rounded-full mb-6">
-        {icons[type]}
-      </div>
-      <h3 className="text-2xl font-black tracking-tight text-foreground mb-2">No {type} Added Yet</h3>
+      <div className="p-6 bg-muted rounded-full mb-6">{icons[type]}</div>
+      <h3 className="text-2xl font-black tracking-tight text-foreground mb-2">
+        No {type} Added Yet
+      </h3>
       <p className="text-muted-foreground max-w-sm mb-8 font-medium">
-        Start building your election by adding the first {type.toLowerCase()}. You'll need at least one to activate the election.
+        Start building your election by adding the first {type.toLowerCase()}.
+        You'll need at least one to activate the election.
       </p>
       <Button className="rounded-xl px-8 font-bold shadow-lg shadow-primary/20">
         <PlusIcon className="mr-2 h-5 w-5" /> Add {type.slice(0, -1)}
@@ -120,9 +129,18 @@ const ElectionDetailPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingUp, setIsSettingUp] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    startAt: "",
+    endAt: "",
+  });
+
   const election = useElectionStore((s) => s.selectedElection);
   const setSelectedElection = useElectionStore((s) => s.setSelectedElection);
+  const updateElectionLocal = useElectionStore((s) => s.updateElection);
+  const removeElection = useElectionStore((s) => s.removeElection);
   const stats = useElectionStore((s) => s.stats);
   const router = useRouter();
   const params = useParams();
@@ -134,7 +152,7 @@ const ElectionDetailPage = () => {
       try {
         setIsLoading(true);
         if (!decryptId) return;
-        if(election?.id === decryptId) return;
+        if (election?.id === decryptId) return;
         const data = await getElections(decryptId);
         if (data.success) {
           setSelectedElection(data.election, data.stats);
@@ -143,14 +161,108 @@ const ElectionDetailPage = () => {
         }
       } catch (error) {
         console.error(error);
-      }
-      finally{
+      } finally {
         setIsLoading(false);
       }
     };
     getData();
   }, [decryptId]);
-  
+
+  const handleActivate = async () => {
+    setLoading(true);
+    try {
+      const data = await activateElection(String(decryptId), true, "update");
+      if (data.success) {
+        updateElectionLocal(String(decryptId), {
+          isActivated: true,
+          status: "active",
+        });
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEnd = async () => {
+    setLoading(true);
+    try {
+      const data = await endElection(String(decryptId), "end");
+      if (data.success) {
+        updateElectionLocal(String(decryptId), {
+          status: "ended",
+        });
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setLoading(true);
+    try {
+      const data = await deleteElection(String(decryptId));
+      if (data.success) {
+        removeElection(String(decryptId));
+        toast.success(data.message);
+        router.replace("/admin");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleOpenModal = () => {
+    if(!election) return;
+    setFormData({
+      title: election.title,
+      description: election.description,
+      startAt: election.startAt,
+      endAt: election.endAt
+    });
+    setIsEditModalOpen(true);
+  }
+
+  const handleUpdate = async() => {
+    try {
+      const data = await updateElection(String(decryptId), formData.title, formData.description, formData.startAt, formData.endAt);
+      if(data.success){
+        toast.success(data.message);
+        updateElectionLocal(String(decryptId), formData);
+        setIsEditModalOpen(false);
+      }
+      else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  function formatDateTimeLocal(date: string | Date) {
+    const d = new Date(date);
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-8 p-6 lg:p-10 max-w-7xl mx-auto">
@@ -173,13 +285,11 @@ const ElectionDetailPage = () => {
       </div>
     );
   }
-
-  if(!election) return null;
+  if (!election) return null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-10 space-y-8">
-        
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
@@ -231,7 +341,7 @@ const ElectionDetailPage = () => {
 
             <div className="flex items-center gap-2 w-full md:w-auto">
               <Button
-                onClick={() => setIsEditModalOpen(true)}
+                onClick={handleOpenModal}
                 variant="outline"
                 className="hidden md:flex border-border rounded-xl font-bold hover:bg-accent transition-all shadow-sm"
               >
@@ -245,24 +355,43 @@ const ElectionDetailPage = () => {
                   align="end"
                   className="w-56 p-2 rounded-xl bg-popover border-border shadow-xl"
                 >
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => setIsEditModalOpen(true)}
                     className="md:hidden rounded-lg font-semibold py-2"
                   >
                     <EditIcon className="mr-2 h-4 w-4" /> Edit Election
                   </DropdownMenuItem>
                   {election?.status === "draft" && (
-                    <DropdownMenuItem className="rounded-lg font-semibold py-2 text-primary focus:text-primary focus:bg-primary/10">
-                      <PowerIcon className="mr-2 h-4 w-4" /> Activate Election
+                    <DropdownMenuItem
+                      disabled={loading}
+                      onClick={handleActivate}
+                      className="rounded-lg font-semibold py-2 text-primary focus:text-primary focus:bg-primary/10"
+                    >
+                      {loading ? (
+                        <>
+                          <Spinner className="size-4" /> Activating
+                        </>
+                      ) : (
+                        <>
+                          <PowerIcon className="mr-2 h-4 w-4" /> Activate
+                          Election
+                        </>
+                      )}
                     </DropdownMenuItem>
                   )}
                   {election?.status === "active" && (
-                    <DropdownMenuItem className="rounded-lg font-semibold py-2 text-destructive focus:text-destructive focus:bg-destructive/10">
+                    <DropdownMenuItem
+                      onClick={handleEnd}
+                      className="rounded-lg font-semibold py-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
                       <SquareIcon className="mr-2 h-4 w-4" /> End Election
                     </DropdownMenuItem>
                   )}
                   {election?.status === "ended" && (
-                    <DropdownMenuItem className="rounded-lg font-semibold py-2 text-destructive focus:text-destructive focus:bg-destructive/10">
+                    <DropdownMenuItem
+                      onClick={handleDelete}
+                      className="rounded-lg font-semibold py-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
                       <Trash2Icon className="mr-2 h-4 w-4" /> Delete Election
                     </DropdownMenuItem>
                   )}
@@ -379,47 +508,78 @@ const ElectionDetailPage = () => {
         <DialogContent className="sm:max-w-150 bg-popover border-border rounded-[2rem] p-0 overflow-hidden shadow-2xl">
           <div className="p-8 space-y-6">
             <DialogHeader>
-              <DialogTitle className="text-3xl font-black tracking-tight text-foreground">Edit Election</DialogTitle>
+              <DialogTitle className="text-3xl font-black tracking-tight text-foreground">
+                Edit Election
+              </DialogTitle>
               <DialogDescription className="text-muted-foreground font-medium">
-                Update the core details of your election cycle. Changes will reflect immediately.
+                Update the core details of your election cycle. Changes will
+                reflect immediately.
               </DialogDescription>
             </DialogHeader>
 
             <div className="grid gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="title" className="text-sm font-black uppercase tracking-widest text-muted-foreground">Election Title</Label>
-                <Input 
-                  id="title" 
-                  defaultValue={election.title}
+                <Label
+                  htmlFor="title"
+                  className="text-sm font-black uppercase tracking-widest text-muted-foreground"
+                >
+                  Election Title
+                </Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
                   className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              
+
               <div className="grid gap-2">
-                <Label htmlFor="description" className="text-sm font-black uppercase tracking-widest text-muted-foreground">Description</Label>
-                <Textarea 
-                  id="description" 
-                  defaultValue={election.description}
+                <Label
+                  htmlFor="description"
+                  className="text-sm font-black uppercase tracking-widest text-muted-foreground"
+                >
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  onChange={handleChange}
+                  value={formData.description}
                   className="bg-muted/50 border-border rounded-xl min-h-25 p-4 font-medium focus:ring-2 focus:ring-primary/20"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                  <Label htmlFor="start" className="text-sm font-black uppercase tracking-widest text-muted-foreground">Start Date & Time</Label>
-                  <Input 
-                    id="start" 
+                  <Label
+                    htmlFor="start"
+                    className="text-sm font-black uppercase tracking-widest text-muted-foreground"
+                  >
+                    Start Date & Time
+                  </Label>
+                  <Input
+                    id="start"
+                    name="startAt"
+                    onChange={handleChange}
                     type="datetime-local"
-                    defaultValue={new Date(election.startAt).toISOString().slice(0, 16)}
+                    value={formatDateTimeLocal(formData.startAt)}
                     className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="end" className="text-sm font-black uppercase tracking-widest text-muted-foreground">End Date & Time</Label>
-                  <Input 
-                    id="end" 
+                  <Label
+                    htmlFor="end"
+                    className="text-sm font-black uppercase tracking-widest text-muted-foreground"
+                  >
+                    End Date & Time
+                  </Label>
+                  <Input
+                    id="end"
+                    name="endAt"
+                    onChange={handleChange}
                     type="datetime-local"
-                    defaultValue={new Date(election.endAt).toISOString().slice(0, 16)}
+                    value={formatDateTimeLocal(formData.endAt)}
                     className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -429,20 +589,21 @@ const ElectionDetailPage = () => {
             <Alert className="bg-primary/5 border-primary/10 rounded-2xl">
               <InfoIcon className="h-5 w-5 text-primary" />
               <AlertDescription className="text-xs font-bold text-primary/80 uppercase tracking-tight">
-                Election status (Active/Upcoming) is automatically calculated based on these dates.
+                Election status (Active/Upcoming) is automatically calculated
+                based on these dates.
               </AlertDescription>
             </Alert>
           </div>
 
           <DialogFooter className="bg-muted/30 p-6 sm:p-8 flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={() => setIsEditModalOpen(false)}
               className="rounded-xl font-bold order-2 sm:order-1"
             >
               Cancel
             </Button>
-            <Button className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20 order-1 sm:order-2">
+            <Button onClick={handleUpdate} className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20 order-1 sm:order-2">
               Save Changes
             </Button>
           </DialogFooter>

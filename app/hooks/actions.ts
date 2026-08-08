@@ -99,7 +99,7 @@ export async function activateElection(id: string, status: boolean, action:strin
 
 export async function getElections(id?:string){
     try {
-        const req = await fetch(`/api/v1/actions/election?id=${id}`, {
+        const req = await fetch(`/api/v1/actions/election?id=${id ? id : ""}`, {
             method: "GET",
             headers,
         });

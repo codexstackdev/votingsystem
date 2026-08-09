@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/connect";
-import Studentschema from "@/app/models/StudentSchema";
+import { connectDB } from "@/lib/connect";
+import Studentschema from "@/models/StudentSchema";
 import bcrypt from "bcryptjs";
 
 export async function POST(req:NextRequest){

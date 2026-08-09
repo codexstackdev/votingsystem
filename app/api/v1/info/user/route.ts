@@ -1,7 +1,7 @@
-import { connectDB } from "@/app/lib/connect";
+import { connectDB } from "@/lib/connect";
 import { jwtVerify } from "jose";
 import { NextRequest, NextResponse } from "next/server";
-import StudentSchema from "@/app/models/StudentSchema";
+import StudentSchema from "@/models/StudentSchema";
 
 
 

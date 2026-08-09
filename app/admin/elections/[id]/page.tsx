@@ -41,16 +41,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useParams, useRouter } from "next/navigation";
-import { Decrypt } from "@/app/hooks/secrue";
+import { Decrypt } from "@/hooks/secrue";
 import {
   activateElection,
   deleteElection,
   endElection,
   getElections,
   updateElection,
-} from "@/app/hooks/actions";
+} from "@/hooks/actions";
 import { toast } from "sonner";
-import { useElectionStore } from "@/app/store/useElectionStore";
+import { useElectionStore } from "@/store/useElectionStore";
 import { Spinner } from "@/components/ui/spinner";
 import PositionsTab from "@/app/components/Position";
 

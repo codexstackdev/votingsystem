@@ -53,7 +53,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Position } from "../hooks/types";
+import { Position } from "../../hooks/types";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },

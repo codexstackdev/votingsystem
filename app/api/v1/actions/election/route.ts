@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/connect";
-import ElectionSchema from "@/app/models/ElectionSchema";
+import { connectDB } from "@/lib/connect";
+import ElectionSchema from "@/models/ElectionSchema";
 import { jwtVerify } from "jose";
-import PositionSchema from "@/app/models/PositionSchema";
-import PartySchema from "@/app/models/PartySchema";
-import CandidateSchema from "@/app/models/CandidateSchema";
-import BallotSchema from "@/app/models/BallotSchema";
+import PositionSchema from "@/models/PositionSchema";
+import PartySchema from "@/models/PartySchema";
+import CandidateSchema from "@/models/CandidateSchema";
+import BallotSchema from "@/models/BallotSchema";
 
 export async function POST(req: NextRequest) {
   const { id, status, title, description, startAt, endAt, action } =

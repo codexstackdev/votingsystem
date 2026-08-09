@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { login } from '../hooks/actions';
+import { login } from '../../hooks/actions';
 import { toast } from 'sonner';
 import { Spinner } from '@/components/ui/spinner';
 import { useRouter } from 'next/navigation';

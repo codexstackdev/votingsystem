@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { electionProps } from "@/app/hooks/types";
+import { electionProps } from "@/hooks/types";
 
 interface ElectionStats {
   positions: number;

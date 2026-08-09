@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { connectDB } from "@/app/lib/connect";
-import StudentSchema from "@/app/models/StudentSchema";
+import { connectDB } from "@/lib/connect";
+import StudentSchema from "@/models/StudentSchema";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 

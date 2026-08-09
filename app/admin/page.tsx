@@ -47,7 +47,7 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { logout } from "../hooks/actions";
+import { logout } from "../../hooks/actions";
 import { Spinner } from "@/components/ui/spinner";
 import Election from "../components/Election";
 

@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
-import { register } from "../hooks/actions";
+import { register } from "../../hooks/actions";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },

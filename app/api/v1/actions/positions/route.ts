@@ -1,5 +1,5 @@
-import { connectDB } from "@/app/lib/connect";
-import PositionSchema from "@/app/models/PositionSchema";
+import { connectDB } from "@/lib/connect";
+import PositionSchema from "@/models/PositionSchema";
 import { NextRequest, NextResponse } from "next/server";
 
 

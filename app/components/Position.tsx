@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import {
   PlusIcon,
@@ -53,7 +53,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Position } from "../../hooks/types";
+import { Position } from "@/hooks/types";
+import { createPosition, deletePosition, getPositions } from "@/hooks/actions";
+import { toast } from "sonner";
+import { usePositionStore } from "@/store/usePositionStore";
+import { useElectionStore } from "@/store/useElectionStore";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -93,19 +97,41 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
   </motion.div>
 );
 
-const PositionsTab = () => {
-  const [positions, setPositions] = useState<Position[]>([
-    { id: "1", title: "President", maxVotes: 1, order: 1, hasCandidates: true },
-    { id: "2", title: "Vice President", maxVotes: 1, order: 2, hasCandidates: true },
-    { id: "3", title: "Secretary", maxVotes: 1, order: 3, hasCandidates: false },
-    { id: "4", title: "Treasurer", maxVotes: 1, order: 4, hasCandidates: false },
-    { id: "5", title: "Senators", maxVotes: 12, order: 5, hasCandidates: false },
-  ]);
-
+const PositionsTab = ({ electionId }: { electionId: string }) => {
+  const positions = usePositionStore((s) => s.positions);
+  const setPositions = usePositionStore((s) => s.setPositions);
+  const fetchedId = usePositionStore((s) => s.fetchedElectionId);
+  const addPositions = usePositionStore((s) => s.addPosition);
+  const setStats = useElectionStore((s) => s.setStats);
+  const removePosition = usePositionStore((s) => s.removePosition);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    order: "",
+    maxVotes: "",
+  });
   const [editingPosition, setEditingPosition] = useState<Position | null>(null);
-  const [positionToDelete, setPositionToDelete] = useState<Position | null>(null);
+  const [positionToDelete, setPositionToDelete] = useState<Position | null>(
+    null,
+  );
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        if (electionId === fetchedId && positions.length > 1) return;
+        const data = await getPositions(electionId);
+        if (data.success) {
+          setPositions(electionId, data.positions);
+        } else {
+          toast.error(data.message);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    getData();
+  }, [electionId]);
 
   const handleAdd = () => {
     setEditingPosition(null);
@@ -114,6 +140,11 @@ const PositionsTab = () => {
 
   const handleEdit = (pos: Position) => {
     setEditingPosition(pos);
+    setFormData({
+      title: pos.title,
+      order: String(pos.order),
+      maxVotes: String(pos.maxVotes),
+    });
     setIsModalOpen(true);
   };
 
@@ -122,6 +153,71 @@ const PositionsTab = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSave = async () => {
+    try {
+      if (editingPosition) {
+        console.log("editing");
+      } else {
+        if (formData.title.trim() === "") {
+          toast.error("Title shouldn't be empty");
+          return;
+        }
+        if (Number(formData.maxVotes) < 1 || Number(formData.maxVotes) > 8) {
+          toast.error("Max votes must be between 1 and 8");
+          return;
+        }
+        if (Number(formData.order) < 1 || Number(formData.order) > 20) {
+          toast.error("Order must be between 1 and 20");
+          return;
+        }
+        const data = await createPosition(
+          electionId,
+          formData.title,
+          Number(formData.order),
+          Number(formData.maxVotes),
+        );
+        if (data.success) {
+          const newPosition: Position = {
+            _id: data.id,
+            title: formData.title,
+            order: Number(formData.order),
+            maxVotes: Number(formData.maxVotes),
+            hasCandidates: false,
+          };
+          addPositions(newPosition);
+          toast.success(data.message);
+          setIsModalOpen(false);
+          setStats({ positions: positions.length + 1 });
+        } else {
+          toast.error(data.message);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      if (!positionToDelete) return;
+      const data = await deletePosition(positionToDelete._id);
+      if (data.success) {
+        removePosition(positionToDelete._id);
+        setStats({ positions: positions.length - 1 });
+        toast.success(data.message);
+        setIsDeleteDialogOpen(false);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
   return (
     <div className="space-y-6">
       {positions.length === 0 ? (
@@ -138,7 +234,10 @@ const PositionsTab = () => {
               <h2 className="text-2xl font-black tracking-tight text-foreground">
                 Positions
               </h2>
-              <Badge variant="secondary" className="rounded-full font-bold px-3">
+              <Badge
+                variant="secondary"
+                className="rounded-full font-bold px-3"
+              >
                 {positions.length}
               </Badge>
             </div>
@@ -172,7 +271,7 @@ const PositionsTab = () => {
               <TableBody>
                 {positions.map((pos) => (
                   <TableRow
-                    key={pos.id}
+                    key={pos._id}
                     className="group border-border hover:bg-muted/30 transition-colors"
                   >
                     <TableCell>
@@ -189,7 +288,9 @@ const PositionsTab = () => {
                         variant="outline"
                         className="rounded-lg border-primary/20 bg-primary/5 text-primary font-bold"
                       >
-                        {pos.maxVotes === 1 ? "Single Choice" : `Up to ${pos.maxVotes}`}
+                        {pos.maxVotes === 1
+                          ? "Single Choice"
+                          : `Up to ${pos.maxVotes}`}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -208,7 +309,7 @@ const PositionsTab = () => {
           <div className="md:hidden space-y-3">
             {positions.map((pos) => (
               <Card
-                key={pos.id}
+                key={pos._id}
                 className="bg-card border-border rounded-2xl shadow-sm overflow-hidden"
               >
                 <CardContent className="p-4 flex items-center justify-between">
@@ -222,7 +323,9 @@ const PositionsTab = () => {
                         variant="outline"
                         className="rounded-md text-[10px] h-5 border-primary/20 bg-primary/5 text-primary font-bold px-2"
                       >
-                        {pos.maxVotes === 1 ? "1 Vote" : `${pos.maxVotes} Votes`}
+                        {pos.maxVotes === 1
+                          ? "1 Vote"
+                          : `${pos.maxVotes} Votes`}
                       </Badge>
                     </div>
                   </div>
@@ -260,8 +363,14 @@ const PositionsTab = () => {
                 </Label>
                 <Input
                   id="title"
+                  name="title"
                   placeholder="e.g. President"
-                  defaultValue={editingPosition?.title}
+                  value={
+                    editingPosition?.title
+                      ? editingPosition.title
+                      : formData.title
+                  }
+                  onChange={handleChange}
                   className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -278,7 +387,14 @@ const PositionsTab = () => {
                     id="maxVotes"
                     type="number"
                     min="1"
-                    defaultValue={editingPosition?.maxVotes || 1}
+                    max="8"
+                    name="maxVotes"
+                    value={
+                      editingPosition?.maxVotes
+                        ? editingPosition.maxVotes
+                        : formData.maxVotes
+                    }
+                    onChange={handleChange}
                     className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -292,7 +408,13 @@ const PositionsTab = () => {
                   <Input
                     id="order"
                     type="number"
-                    defaultValue={editingPosition?.order || positions.length + 1}
+                    name="order"
+                    value={
+                      editingPosition?.order
+                        ? editingPosition.order
+                        : formData.order
+                    }
+                    onChange={handleChange}
                     className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -301,7 +423,8 @@ const PositionsTab = () => {
               <div className="flex gap-2 p-3 bg-primary/5 rounded-xl border border-primary/10">
                 <InfoIcon className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <p className="text-[11px] font-medium text-primary/80 leading-tight">
-                  1 = single choice. Set higher for multi-seat positions like Senators.
+                  1 = single choice. Set higher for multi-seat positions like
+                  Senators.
                 </p>
               </div>
             </div>
@@ -315,14 +438,20 @@ const PositionsTab = () => {
             >
               Cancel
             </Button>
-            <Button className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20 order-1 sm:order-2">
+            <Button
+              onClick={handleSave}
+              className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20 order-1 sm:order-2"
+            >
               {editingPosition ? "Save Changes" : "Add Position"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
         <AlertDialogContent className="bg-popover border-border rounded-[2rem] shadow-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-2xl font-black tracking-tight text-foreground">
@@ -337,7 +466,10 @@ const PositionsTab = () => {
             <AlertDialogCancel className="rounded-xl font-bold">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-bold px-6">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-bold px-6"
+            >
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -358,7 +490,7 @@ const PositionActions = ({
 }) => (
   <DropdownMenu>
     <DropdownMenuTrigger className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-accent">
-        <MoreVerticalIcon className="h-4 w-4" />
+      <MoreVerticalIcon className="h-4 w-4" />
     </DropdownMenuTrigger>
     <DropdownMenuContent
       align="end"
@@ -370,7 +502,7 @@ const PositionActions = ({
       >
         <EditIcon className="mr-2 h-4 w-4" /> Edit
       </DropdownMenuItem>
-      
+
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger>
@@ -389,8 +521,8 @@ const PositionActions = ({
             </div>
           </TooltipTrigger>
           {pos.hasCandidates && (
-            <TooltipContent 
-              side="left" 
+            <TooltipContent
+              side="left"
               className="bg-popover border-border text-foreground font-bold text-xs rounded-lg shadow-lg"
             >
               Cannot delete: candidates are assigned to this position

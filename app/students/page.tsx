@@ -25,8 +25,8 @@ import {
   LogOutIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { getUserData, logout } from "../../hooks/actions";
-import { userProps } from "../../hooks/types";
+import { getUserData, logout } from "@/hooks/actions";
+import { userProps } from "@/hooks/types";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter } from "next/navigation";

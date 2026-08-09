@@ -492,7 +492,7 @@ const ElectionDetailPage = () => {
               </div>
 
               <TabsContent value="positions" className="mt-0 outline-none">
-                <PositionsTab/>
+                <PositionsTab electionId={String(decryptId)} />
               </TabsContent>
               <TabsContent value="parties" className="mt-0 outline-none">
                 <EmptySubPage type="Parties" />

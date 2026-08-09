@@ -62,12 +62,12 @@ import {
   endElection,
   getElections,
   updateElection,
-} from "../../hooks/actions";
+} from "@/hooks/actions";
 import { toast } from "sonner";
-import { electionProps } from "../../hooks/types";
+import { electionProps } from "@/hooks/types";
 import { useElectionStore } from "../../store/useElectionStore";
 import { useRouter } from "next/navigation";
-import { Encrypt } from "../../hooks/secrue";
+import { Encrypt } from "@/hooks/secrue";
 
 type ElectionStatus = "draft" | "upcoming" | "active" | "ended";
 

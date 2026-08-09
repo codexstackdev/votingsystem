@@ -155,3 +155,48 @@ export async function updateElection(id:string, title: string, description: stri
     }
 }
 //end of election actions
+
+//position actions
+export async function createPosition(electionId: string, title: string, order: number, maxVotes: number){
+    try {
+        const req = await fetch("/api/v1/actions/positions", {
+            method: "POST",
+            headers,
+            body: JSON.stringify({electionId, title, order, maxVotes})
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+
+export async function getPositions(id:string){
+    try {
+        const req = await fetch(`/api/v1/actions/positions?election=${id}`, {
+            method: "GET",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+
+export async function deletePosition(id:string){
+    try {
+        const req = await fetch(`/api/v1/actions/positions?id=${id}`, {
+            method: "DELETE",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+//end of position actions

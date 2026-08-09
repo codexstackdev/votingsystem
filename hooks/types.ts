@@ -28,7 +28,7 @@ export interface electionProps {
 }
 
 export interface Position {
-  id: string;
+  _id: string;
   title: string;
   maxVotes: number;
   order: number;

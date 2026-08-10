@@ -54,6 +54,7 @@ import { useElectionStore } from "@/store/useElectionStore";
 import { Spinner } from "@/components/ui/spinner";
 import PositionsTab from "@/app/components/Position";
 import PartiesTab from "@/app/components/Parties";
+import CandidatesTab from "@/app/components/Candidate";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -510,7 +511,7 @@ const ElectionDetailPage = () => {
                 <PartiesTab electionId={String(decryptId)} createdBy={String(election.createdBy)} />
               </TabsContent>
               <TabsContent keepMounted={true} value="candidates" className="mt-0 outline-none">
-                <EmptySubPage type="Candidates" />
+                <CandidatesTab/>
               </TabsContent>
             </Tabs>
           </motion.div>

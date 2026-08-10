@@ -43,3 +43,21 @@ export interface Party {
   logoUrl?: string;
   hasCandidates: boolean;
 }
+
+export type CandidateStatus = "pending" | "approved" | "disqualified";
+
+export interface Candidate {
+  id: string;
+  student: {
+    name: string;
+    lrn: string;
+    avatarUrl?: string;
+  };
+  position: string;
+  party: {
+    name: string;
+    color: string;
+  };
+  status: CandidateStatus;
+  platform: string;
+}

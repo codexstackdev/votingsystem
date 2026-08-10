@@ -149,6 +149,12 @@ export async function DELETE(req: NextRequest) {
         { status: 400 },
       );
     await connectDB();
+     await Promise.all([
+      CandidateSchema.deleteMany({ election: id }),
+      PositionSchema.deleteMany({ election: id }),
+      PartySchema.deleteMany({ election: id }),
+      BallotSchema.deleteMany({ election: id }),
+    ]);
     const election = await ElectionSchema.findByIdAndDelete(id);
     return NextResponse.json(
       { success: true, message: "Election deleted successfully" },

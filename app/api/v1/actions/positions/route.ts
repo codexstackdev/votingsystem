@@ -96,14 +96,50 @@ export async function DELETE(req: NextRequest) {
         { success: false, message: "Unauthorized" },
         { status: 401 },
       );
-    if(!id)
+    if (!id)
       return NextResponse.json(
         { success: false, message: "Missing parameter" },
         { status: 400 },
       );
-      await connectDB();
-      const position = await PositionSchema.findByIdAndDelete(id);
-      return NextResponse.json({success: true, message: "Position deleted successfully"}, {status: 200});
+    await connectDB();
+    const position = await PositionSchema.findByIdAndDelete(id);
+    return NextResponse.json(
+      { success: true, message: "Position deleted successfully" },
+      { status: 200 },
+    );
+  } catch (error) {
+    const err = error instanceof Error ? error.message : "Server Unreachable";
+    return NextResponse.json({ success: false, message: err }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  const { electionId, title, order, maxVotes } = await req.json();
+  const token = req.cookies.get("cred")?.value;
+  const secret = new TextEncoder().encode(process.env.SECRET_KEY);
+  try {
+    const { payload } = await jwtVerify(token as string, secret);
+    if (!payload.user && payload.role !== "superadmin")
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    await connectDB();
+    const updateData: Record<string, unknown> = {};
+    if (title !== undefined) updateData.title = title;
+    if (order !== undefined) updateData.order = order;
+    if (maxVotes !== undefined) updateData.maxVotes = maxVotes;
+    const position = await PositionSchema.findByIdAndUpdate(
+      electionId,
+      {
+        $set: { updateData },
+      },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
+    );
+    return NextResponse.json({success: true, message: "Position updated successfully"}, {status: 200});
   } catch (error) {
     const err = error instanceof Error ? error.message : "Server Unreachable";
     return NextResponse.json({ success: false, message: err }, { status: 500 });

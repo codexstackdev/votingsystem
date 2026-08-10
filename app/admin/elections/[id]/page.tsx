@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { motion, Variants, AnimatePresence } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import {
   ChevronLeftIcon,
   MoreVerticalIcon,
@@ -53,6 +53,7 @@ import { toast } from "sonner";
 import { useElectionStore } from "@/store/useElectionStore";
 import { Spinner } from "@/components/ui/spinner";
 import PositionsTab from "@/app/components/Position";
+import PartiesTab from "@/app/components/Parties";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -211,6 +212,10 @@ const ElectionDetailPage = () => {
   const handleDelete = async () => {
     setLoading(true);
     try {
+      if (election?.status !== "draft") {
+        toast.error("Only draft elections can be deleted");
+        return;
+      }
       const data = await deleteElection(String(decryptId));
       if (data.success) {
         removeElection(String(decryptId));
@@ -226,37 +231,44 @@ const ElectionDetailPage = () => {
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleOpenModal = () => {
-    if(!election) return;
+    if (!election) return;
     setFormData({
       title: election.title,
       description: election.description,
       startAt: election.startAt,
-      endAt: election.endAt
+      endAt: election.endAt,
     });
     setIsEditModalOpen(true);
-  }
+  };
 
-  const handleUpdate = async() => {
+  const handleUpdate = async () => {
     try {
-      const data = await updateElection(String(decryptId), formData.title, formData.description, formData.startAt, formData.endAt);
-      if(data.success){
+      const data = await updateElection(
+        String(decryptId),
+        formData.title,
+        formData.description,
+        formData.startAt,
+        formData.endAt,
+      );
+      if (data.success) {
         toast.success(data.message);
         updateElectionLocal(String(decryptId), formData);
         setIsEditModalOpen(false);
-      }
-      else{
-        toast.error(data.message)
+      } else {
+        toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
     }
-  }
+  };
 
   function formatDateTimeLocal(date: string | Date) {
     const d = new Date(date);
@@ -491,13 +503,13 @@ const ElectionDetailPage = () => {
                 </TabsList>
               </div>
 
-              <TabsContent value="positions" className="mt-0 outline-none">
+              <TabsContent keepMounted={true} value="positions" className="mt-0 outline-none">
                 <PositionsTab electionId={String(decryptId)} />
               </TabsContent>
-              <TabsContent value="parties" className="mt-0 outline-none">
-                <EmptySubPage type="Parties" />
+              <TabsContent keepMounted={true} value="parties" className="mt-0 outline-none">
+                <PartiesTab electionId={String(decryptId)} createdBy={String(election.createdBy)} />
               </TabsContent>
-              <TabsContent value="candidates" className="mt-0 outline-none">
+              <TabsContent keepMounted={true} value="candidates" className="mt-0 outline-none">
                 <EmptySubPage type="Candidates" />
               </TabsContent>
             </Tabs>
@@ -604,7 +616,10 @@ const ElectionDetailPage = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleUpdate} className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20 order-1 sm:order-2">
+            <Button
+              onClick={handleUpdate}
+              className="rounded-xl font-bold px-8 shadow-lg shadow-primary/20 order-1 sm:order-2"
+            >
               Save Changes
             </Button>
           </DialogFooter>

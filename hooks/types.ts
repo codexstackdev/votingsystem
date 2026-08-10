@@ -25,6 +25,7 @@ export interface electionProps {
     description: string;
     startAt: string;
     endAt: string
+    createdBy?: string;
 }
 
 export interface Position {
@@ -32,5 +33,13 @@ export interface Position {
   title: string;
   maxVotes: number;
   order: number;
+  hasCandidates: boolean;
+}
+
+export interface Party {
+  _id: string;
+  name: string;
+  color: string;
+  logoUrl?: string;
   hasCandidates: boolean;
 }

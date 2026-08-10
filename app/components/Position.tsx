@@ -54,7 +54,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Position } from "@/hooks/types";
-import { createPosition, deletePosition, getPositions } from "@/hooks/actions";
+import { createPosition, deletePosition, getPositions, updatePosition } from "@/hooks/actions";
 import { toast } from "sonner";
 import { usePositionStore } from "@/store/usePositionStore";
 import { useElectionStore } from "@/store/useElectionStore";
@@ -104,6 +104,8 @@ const PositionsTab = ({ electionId }: { electionId: string }) => {
   const addPositions = usePositionStore((s) => s.addPosition);
   const setStats = useElectionStore((s) => s.setStats);
   const removePosition = usePositionStore((s) => s.removePosition);
+  const updatePositionLocal = usePositionStore((s) => s.updatePosition);
+  const reset = usePositionStore((s) => s.reset);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -119,12 +121,12 @@ const PositionsTab = ({ electionId }: { electionId: string }) => {
   useEffect(() => {
     const getData = async () => {
       try {
-        if (electionId === fetchedId && positions.length > 1) return;
+        if (positions.length >= 1 && electionId === fetchedId) return;
         const data = await getPositions(electionId);
         if (data.success) {
           setPositions(electionId, data.positions);
         } else {
-          toast.error(data.message);
+          reset();
         }
       } catch (error) {
         console.log(error);
@@ -161,7 +163,27 @@ const PositionsTab = ({ electionId }: { electionId: string }) => {
   const handleSave = async () => {
     try {
       if (editingPosition) {
-        console.log("editing");
+        if (formData.title.trim() === "") {
+          toast.error("Title shouldn't be empty");
+          return;
+        }
+        if (Number(formData.maxVotes) < 1 || Number(formData.maxVotes) > 8) {
+          toast.error("Max votes must be between 1 and 8");
+          return;
+        }
+        if (Number(formData.order) < 1 || Number(formData.order) > 20) {
+          toast.error("Order must be between 1 and 20");
+          return;
+        }
+        const data = await updatePosition(editingPosition._id, formData.title, Number(formData.order), Number(formData.maxVotes));
+        if(data.success){
+          toast.success(data.message);
+          updatePositionLocal(editingPosition._id, {title: formData.title, order: Number(formData.order), maxVotes: Number(formData.maxVotes)});
+          setIsModalOpen(false);
+        }
+        else{
+          toast.error(data.message);
+        }
       } else {
         if (formData.title.trim() === "") {
           toast.error("Title shouldn't be empty");
@@ -365,11 +387,7 @@ const PositionsTab = ({ electionId }: { electionId: string }) => {
                   id="title"
                   name="title"
                   placeholder="e.g. President"
-                  value={
-                    editingPosition?.title
-                      ? editingPosition.title
-                      : formData.title
-                  }
+                  value={formData.title}
                   onChange={handleChange}
                   className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                 />
@@ -389,11 +407,7 @@ const PositionsTab = ({ electionId }: { electionId: string }) => {
                     min="1"
                     max="8"
                     name="maxVotes"
-                    value={
-                      editingPosition?.maxVotes
-                        ? editingPosition.maxVotes
-                        : formData.maxVotes
-                    }
+                    value={formData.maxVotes}
                     onChange={handleChange}
                     className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                   />
@@ -409,11 +423,7 @@ const PositionsTab = ({ electionId }: { electionId: string }) => {
                     id="order"
                     type="number"
                     name="order"
-                    value={
-                      editingPosition?.order
-                        ? editingPosition.order
-                        : formData.order
-                    }
+                    value={formData.order}
                     onChange={handleChange}
                     className="bg-muted/50 border-border rounded-xl h-12 px-4 font-medium focus:ring-2 focus:ring-primary/20"
                   />

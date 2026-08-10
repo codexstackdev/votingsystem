@@ -27,12 +27,6 @@ export async function GET(req: NextRequest) {
         order: 1,
       })
       .select("-updatedAt -createdAt");
-
-    if (positions.length === 0)
-      return NextResponse.json(
-        { success: false, message: "Election doesn't have any positions yet" },
-        { status: 400 },
-      );
     return NextResponse.json({ success: true, positions }, { status: 200 });
   } catch (error) {
     const err = error instanceof Error ? error.message : "Server Unreachable";

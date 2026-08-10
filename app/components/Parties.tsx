@@ -54,10 +54,11 @@ import {
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Party } from "@/hooks/types";
-import { createParty, getParties } from "@/hooks/actions";
+import { createParty, deleteParty, getParties, updateParty } from "@/hooks/actions";
 import { toast } from "sonner";
 import { usePartyStore } from "@/store/usePartyStore";
 import { useElectionStore } from "@/store/useElectionStore";
+import { useHydrated } from "@/hooks/useHydrated";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -115,7 +116,9 @@ const PartiesTab = ({electionId, createdBy} : {electionId: string, createdBy: st
   const addParty = usePartyStore((s) => s.addParty);
   const updateStats = useElectionStore((s) => s.setStats);
   const fetchedId = usePartyStore((s) => s.fetchedElectionId);
-  const reset = usePartyStore((s) => s.reset);
+  const updatePartyLocal = usePartyStore((s) => s.updateParty);
+  const deletePartyLocal = usePartyStore((s) => s.removeParty);
+  const hydrated = useHydrated(usePartyStore);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -128,17 +131,18 @@ const PartiesTab = ({electionId, createdBy} : {electionId: string, createdBy: st
 
   useEffect(() => {
     const getData = async()=>{
+      if(!hydrated) return;
       if(electionId === fetchedId) return;
       const data = await getParties(electionId);
       if(data.success){
         setParties(electionId, data.parties)
       }
       else{
-        reset();
+        toast.error(data.message ?? "Failed to load parties");
       }
     }
     getData();
-  }, [electionId, fetchedId])
+  }, [electionId]);
 
   const handleAdd = () => {
     setEditingParty(null);
@@ -164,7 +168,14 @@ const PartiesTab = ({electionId, createdBy} : {electionId: string, createdBy: st
   const handleSave = async() => {
     try {
       if(editingParty){
-        console.log(editingParty);
+        const data = await updateParty(editingParty._id, formName, formColor, formLogo);
+        if(data.success){
+          toast.success(data.message);
+          updatePartyLocal(editingParty._id, {name: formName, color: formColor, logoUrl: formLogo});
+          setIsModalOpen(false);
+        }else{
+          toast.error(data.mesage);
+        }
       }
       else{
         const data = await createParty(electionId, formName, formColor, createdBy, formLogo);
@@ -179,6 +190,7 @@ const PartiesTab = ({electionId, createdBy} : {electionId: string, createdBy: st
           addParty(newParty);
           updateStats({parties: parties.length + 1});
           toast.success(data.message);
+          setIsModalOpen(false);
         }
         else{
           toast.error(data.message);
@@ -186,6 +198,24 @@ const PartiesTab = ({electionId, createdBy} : {electionId: string, createdBy: st
       }
     } catch (error) {
       console.log(error)
+    }
+  }
+
+  const handleDelete = async() => {
+    if(!partyToDelete) return;
+    try {
+      const data = await deleteParty(partyToDelete._id);
+      if(data.success){
+        deletePartyLocal(partyToDelete._id)
+        toast.success(data.message);
+        updateStats({parties: parties.length - 1})
+        setIsDeleteDialogOpen(false);
+      }
+      else{
+        toast.error(data.message)
+      }
+    } catch (error) {
+      console.error(error)
     }
   }
 
@@ -431,7 +461,7 @@ const PartiesTab = ({electionId, createdBy} : {electionId: string, createdBy: st
             <AlertDialogCancel className="rounded-xl font-bold">
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-bold px-6">
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl font-bold px-6">
               Confirm Delete
             </AlertDialogAction>
           </AlertDialogFooter>

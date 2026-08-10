@@ -65,10 +65,74 @@ export async function GET(req: NextRequest) {
         { success: false, message: "Unauthorized" },
         { status: 401 },
       );
-      await connectDB();
-      const parties = await PartySchema.find({election: id});
-      if(parties.length <=0 ) return NextResponse.json({success: false, message: "Election doesn't have any parties yet"}, {status: 400})
-      return NextResponse.json({success: true, parties}, {status: 200})
+    await connectDB();
+    const parties = await PartySchema.find({ election: id });
+    return NextResponse.json({ success: true, parties }, { status: 200 });
+  } catch (error) {
+    const err = error instanceof Error ? error.message : "Server Unreachable";
+    return NextResponse.json({ success: false, message: err }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const param = req.nextUrl.searchParams;
+  const id = param.get("id");
+  const token = req.cookies.get("cred")?.value;
+  const secret = new TextEncoder().encode(process.env.SECRET_KEY);
+  try {
+    const { payload } = await jwtVerify(token as string, secret);
+    if (!payload.user && payload.role !== "superadmin")
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
+    if (!id)
+      return NextResponse.json(
+        { success: false, message: "Missing parameter" },
+        { status: 400 },
+      );
+    await connectDB();
+    await PartySchema.findByIdAndDelete(id);
+    return NextResponse.json(
+      { success: true, message: "Party deleted successfully" },
+      { status: 200 },
+    );
+  } catch (error) {
+    const err = error instanceof Error ? error.message : "Server Unreachable";
+    return NextResponse.json({ success: false, message: err }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest) {
+  const { id, name, color, logoUrl } = await req.json();
+  const token = req.cookies.get("cred")?.value;
+  const secret = new TextEncoder().encode(process.env.SECRET_KEY);
+  try {
+    const { payload } = await jwtVerify(token as string, secret);
+    if (!payload.user && payload.role !== "superadmin")
+      return NextResponse.json(
+        { success: false, message: "Unahtorized" },
+        { status: 401 },
+      );
+    if (!id)
+      return NextResponse.json(
+        { success: false, message: "Missing parameter" },
+        { status: 400 },
+      );
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (color !== undefined) updateData.color = color;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+    await connectDB();
+    const updateParty = await PartySchema.findByIdAndUpdate(
+      id,
+      { $set: updateData , },
+      { returnDocument: "after", runValidators: true },
+    );
+    return NextResponse.json(
+      { success: true, message: "Party updated successfully" },
+      { status: 200 },
+    );
   } catch (error) {
     const err = error instanceof Error ? error.message : "Server Unreachable";
     return NextResponse.json({ success: false, message: err }, { status: 500 });

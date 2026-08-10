@@ -121,19 +121,19 @@ const PositionsTab = ({ electionId }: { electionId: string }) => {
   useEffect(() => {
     const getData = async () => {
       try {
-        if (positions.length >= 1 && electionId === fetchedId) return;
+        if (electionId === fetchedId) return;
         const data = await getPositions(electionId);
         if (data.success) {
           setPositions(electionId, data.positions);
         } else {
-          reset();
+          toast.message(data.message ?? "Failed to load positions")
         }
       } catch (error) {
         console.log(error);
       }
     };
     getData();
-  }, [electionId]);
+  }, [electionId, fetchedId]);
 
   const handleAdd = () => {
     setEditingPosition(null);

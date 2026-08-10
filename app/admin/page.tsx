@@ -173,7 +173,7 @@ const SuperAdminDashboard: React.FC = () => {
     <div className="min-h-screen flex bg-background text-foreground relative overflow-hidden">
       <div className="lg:hidden fixed top-4 left-4 z-50">
         <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
-          <SheetTrigger className="bg-card/80 backdrop-blur-md border-border/50 shadow-md">
+          <SheetTrigger className="bg-card/80 backdrop-blur-md border-border/50  shadow-md">
             <MenuIcon className="h-6 w-6 text-foreground" />
           </SheetTrigger>
           <SheetContent

@@ -231,12 +231,38 @@ export async function createParty(electionId: string, name: string, color: strin
         return { success: false, message: handleError(error)}
     }
 }
-
 export async function getParties(id:string){
     try {
         const req = await fetch(`/api/v1/actions/parties?election=${id}`, {
             method: "GET",
             headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+export async function deleteParty(id:string){
+    try {
+        const req = await fetch(`/api/v1/actions/parties?id=${id}`, {
+            method: "DELETE",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+export async function updateParty(id: string, name: string, color: string, logoUrl?: string){
+    try {
+        const req = await fetch("/api/v1/actions/parties", {
+            method: "PUT",
+            headers,
+            body: JSON.stringify({id, name, color, logoUrl})
         });
         const data = await req.json();
         if(!data.success) return { success: false, message: data.message};

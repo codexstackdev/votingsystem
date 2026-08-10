@@ -6,7 +6,7 @@ const CandidateSchema = new Schema({
   party:    { type: Schema.Types.ObjectId, ref: "Party", required: true },
   student:  { type: Schema.Types.ObjectId, ref: "Student", required: true },
   platform: { type: String, required: true },
-  status:      { type: String, enum: ["pending", "approved", "disqualified"], default: "pending" },
+  status:      { type: String, enum: ["approved", "disqualified"], default: "approved" },
   submittedBy: { type: Schema.Types.ObjectId, ref: "Student", required: true },
 }, { timestamps: true });
 

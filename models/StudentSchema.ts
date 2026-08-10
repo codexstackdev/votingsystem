@@ -8,6 +8,8 @@ const StudentSchema = new mongoose.Schema(
     passwordHash: { type: String, required: true, trim: true },
     course: { type: String, required: true, trim: true },
     gradeLevel: { type: Number, required: true, min: 7, max: 12 },
+    photoUrl: {type:String, default: ""},
+    photoId: {type:String, default: ""},
     accountStatus: {
       type: String,
       enum: ["active", "disabled"],

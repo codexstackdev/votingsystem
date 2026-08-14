@@ -6,7 +6,7 @@ const ElectionSchema = new Schema({
   startAt:     { type: Date, required: true },
   endAt:       { type: Date, required: true },
   isActivated: { type: Boolean, default: false },
-  createdBy:   { type: Schema.Types.ObjectId, ref: "Admin", required: true },
+  createdBy:   { type: Schema.Types.ObjectId, ref: "Student", required: true },
 }, { timestamps: true });
 
 ElectionSchema.virtual("status").get(function () {

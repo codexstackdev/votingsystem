@@ -64,6 +64,20 @@ export async function getUserData(){
         return { success: false, message: handleError(error)}
     }
 }
+
+export async function SearchData(q:string, t:string){
+    try {
+        const req = await fetch(`/api/v1/actions/search?q=${q}&t=${t}`, {
+            method: "GET",
+            headers
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
 //end of data
 
 //election actions
@@ -272,3 +286,19 @@ export async function updateParty(id: string, name: string, color: string, logoU
     }
 }
 //end of parties actions
+
+//candidates actions
+export async function getCandidates(id:string){
+    try {
+        const req = await fetch(`/api/v1/actions/candidates?id=${id}`, {
+            method: "GET",
+            headers,
+        });
+        const data = await req.json();
+        if(!data.success) return { success: false, message: data.message};
+        return data;
+    } catch (error) {
+        return { success: false, message: handleError(error)}
+    }
+}
+//end of candidates actions

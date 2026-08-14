@@ -27,7 +27,7 @@ const StudentSchema = new mongoose.Schema(
     },
     promotedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
+      ref: "Student",
       default: null,
     },
     promotedAt: {

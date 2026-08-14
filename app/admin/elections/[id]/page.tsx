@@ -511,7 +511,7 @@ const ElectionDetailPage = () => {
                 <PartiesTab electionId={String(decryptId)} createdBy={String(election.createdBy)} />
               </TabsContent>
               <TabsContent keepMounted={true} value="candidates" className="mt-0 outline-none">
-                <CandidatesTab/>
+                <CandidatesTab electionId={String(decryptId)} />
               </TabsContent>
             </Tabs>
           </motion.div>

@@ -11,7 +11,7 @@ const PartySchema = new Schema(
     name: { type: String, required: true },
     color: { type: String, default: "#1E3A8A" },
     logoUrl: { type: String },
-    createdBy: { type: Schema.Types.ObjectId, ref: "Admin", required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "Student", required: true },
   },
   { timestamps: true },
 );

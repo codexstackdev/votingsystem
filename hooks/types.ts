@@ -10,6 +10,13 @@ export interface userProps {
     role: string;
 }
 
+export interface StudentProps {
+  _id: string;
+  name: string;
+  lrnNumber: string;
+  photoUrl?: string;
+}
+
 export interface statsProps {
     ballots: number;
     candidates: number;
